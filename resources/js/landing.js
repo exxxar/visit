@@ -203,7 +203,7 @@ function initRealMap() {
     console.log('[MAP] container:', container);
     console.log('[MAP] dimensions:', container.offsetWidth, 'x', container.offsetHeight);
 
-    const style = MAPTILER_KEY && MAPTILER_STYLE
+   /* const style = MAPTILER_KEY && MAPTILER_STYLE
         ? `https://api.maptiler.com/maps/${MAPTILER_STYLE}/style.json?key=${MAPTILER_KEY}`
         : {
             version: 8,
@@ -219,7 +219,62 @@ function initRealMap() {
                 {id: 'bg', type: 'background', paint: {'background-color': '#0b101d'}},  // ← добавили
                 {id: 'osm', type: 'raster', source: 'osm'},
             ],
-        };
+        };*/
+
+    const style = {
+        version: 8,
+        sources: {
+            carto: {
+                type: 'raster',
+                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                tileSize: 256,
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/attributions">CARTO</a>',
+            },
+        },
+        layers: [
+            { id: 'carto', type: 'raster', source: 'carto' },
+        ],
+    };
+
+/*
+    const style = {
+        version: 8,
+        sources: {
+            osm: {
+                type: 'raster',
+                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tileSize: 256,
+                attribution: '© OpenStreetMap contributors',
+                // важно для OSM: не использовать при большом трафике
+                maxzoom: 19,
+            },
+        },
+        layers: [
+            { id: 'osm', type: 'raster', source: 'osm' },
+        ],
+    };
+*/
+
+
+/*
+    const style = {
+        version: 8,
+        sources: {
+            osm: {
+                type: 'raster',
+                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tileSize: 256,
+                attribution: '© OpenStreetMap contributors',
+                // важно для OSM: не использовать при большом трафике
+                maxzoom: 19,
+            },
+        },
+        layers: [
+            { id: 'osm', type: 'raster', source: 'osm' },
+        ],
+    };*/
+
+
 
     console.log('[MAP] style:', MAPTILER_KEY ? 'MapTiler' : 'OSM fallback');
 
