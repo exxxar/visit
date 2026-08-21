@@ -314,22 +314,16 @@ $('#mSearch').onclick = () => setTimeout(() => $('#searchInput').focus({preventS
 
 /* ---------- быстрые сценарии ---------- */
 function jumpCat(f, msg) {
-    if (!f || f === 'all') return;
     setFilter(f);
-    $('#map').scrollIntoView({ behavior: 'smooth' });
+    $('#map').scrollIntoView({behavior: 'smooth'});
     toast(msg || ('Показываем на карте: ' + (CATS[f]?.l ?? f)));
 }
 
-// универсальный селектор: ищет все чипы с data-cat
-$$('.quick .chip[data-cat], [data-cat]').forEach(ch => {
-    ch.onclick = () => jumpCat(ch.dataset.cat);
-});
-
-// чипы внутри секции #quick (по id секции — надёжнее)
+$$('.hero .quick .chip').forEach(ch => ch.onclick = () => jumpCat(ch.dataset.cat));
 $$('#quick .chip[data-sc]').forEach(ch => ch.onclick = () => {
     const s = ch.dataset.sc;
     if (s === 'near') {
-        $('#nearby').scrollIntoView({ behavior: 'smooth' });
+        $('#nearby').scrollIntoView({behavior: 'smooth'});
         if ($('#nearGrid').hidden) $('#geoBtn').click();
         return;
     }
