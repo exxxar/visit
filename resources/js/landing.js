@@ -704,4 +704,32 @@ $$('.quick-card').forEach(card => {
     };
 });
 
+/* ---------- карточки категорий (секция «Город в одном месте») ---------- */
+const CAT_MAP = {
+    'cat-food':    'food',
+    'cat-leisure': 'leisure',
+    'cat-beauty':  'beauty',
+    'cat-shop':    'shop',
+    'cat-auto':    'auto',
+};
+
+// привязываем по id
+Object.entries(CAT_MAP).forEach(([id, cat]) => {
+    const card = document.getElementById(id);
+    if (!card) return;
+    card.onclick = () => jumpToCategory(cat, card.querySelector('h3')?.textContent);
+});
+
+// привязываем по data-cat (для карточек без id)
+$$('.b-card[data-cat]').forEach(card => {
+    card.onclick = () => jumpToCategory(card.dataset.cat, card.querySelector('h3')?.textContent);
+});
+
+function jumpToCategory(cat, label) {
+    filter = cat;
+    applyState();
+    $('#map').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toast(`Показаны заведения: ${label || cat}`);
+}
+
 goPage(0);
