@@ -314,16 +314,22 @@ $('#mSearch').onclick = () => setTimeout(() => $('#searchInput').focus({preventS
 
 /* ---------- быстрые сценарии ---------- */
 function jumpCat(f, msg) {
+    if (!f || f === 'all') return;
     setFilter(f);
-    $('#map').scrollIntoView({behavior: 'smooth'});
+    $('#map').scrollIntoView({ behavior: 'smooth' });
     toast(msg || ('Показываем на карте: ' + (CATS[f]?.l ?? f)));
 }
 
-$$('.hero .quick .chip').forEach(ch => ch.onclick = () => jumpCat(ch.dataset.cat));
+// универсальный селектор: ищет все чипы с data-cat
+$$('.quick .chip[data-cat], [data-cat]').forEach(ch => {
+    ch.onclick = () => jumpCat(ch.dataset.cat);
+});
+
+// чипы внутри секции #quick (по id секции — надёжнее)
 $$('#quick .chip[data-sc]').forEach(ch => ch.onclick = () => {
     const s = ch.dataset.sc;
     if (s === 'near') {
-        $('#nearby').scrollIntoView({behavior: 'smooth'});
+        $('#nearby').scrollIntoView({ behavior: 'smooth' });
         if ($('#nearGrid').hidden) $('#geoBtn').click();
         return;
     }
@@ -683,6 +689,25 @@ $('#subForm').addEventListener('submit', async e => {
     } else {
         toast(res.error);
     }
+});
+
+/* ---------- карточки категорий (секция "Город в одном месте") ---------- */
+$$('.quick-card').forEach(card => {
+    card.onclick = () => {
+        const cat = card.dataset.category;
+        if (!cat) return;
+
+        // применяем фильтр
+        filter = cat;
+        applyState();
+
+        // скроллим к карте
+        $('#map').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // показываем уведомление
+        const catName = card.querySelector('h3')?.textContent || cat;
+        toast(`Показаны заведения: ${catName}`);
+    };
 });
 
 goPage(0);
