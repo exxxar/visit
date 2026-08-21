@@ -6,6 +6,12 @@
             <p class="s-sub">Светящиеся точки — это места, которые уже любят горожане.</p>
         </div>
 
+        {{-- переключатель режима --}}
+        <div class="map-mode reveal">
+            <button class="chip on" id="modeScheme">🗺 Схема города</button>
+            <button class="chip" id="modeReal">🌍 Реальная карта</button>
+        </div>
+
         <div class="map-tools reveal" id="mapFilters">
             <button class="chip on" data-f="all">Все</button>
             <button class="chip" data-f="food">Еда</button>
@@ -26,6 +32,7 @@
         </div>
 
         <div class="map-view reveal" id="mapView">
+            {{-- схема --}}
             <div class="map-world" id="mapWorld">
                 <svg viewBox="0 0 1000 620" preserveAspectRatio="none" fill="none" aria-hidden="true">
                     <defs>
@@ -50,6 +57,9 @@
                 </svg>
             </div>
 
+            {{-- реальная карта --}}
+            <div class="map-real" id="mapReal" hidden></div>
+
             <div class="map-card" id="mapCard" hidden>
                 <button class="mc-x" id="mcClose">✕</button>
                 <img id="mcImg" src="" alt="">
@@ -70,3 +80,5 @@
         </div>
     </div>
 </section>
+
+<script>window.MAPTILER_KEY = @json(config('services.maptiler.key'));</script>

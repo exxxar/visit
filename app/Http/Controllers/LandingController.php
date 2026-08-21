@@ -31,6 +31,8 @@ class LandingController extends Controller
                 'desc'  => $p->short_description,
                 'cover' => $p->cover_url,
                 'xy'    => $p->mapXY(),
+                'lat'   => (float) $p->lat,   // ← добавили
+                'lng'   => (float) $p->lng,   // ← добавили
             ])->filter(fn ($p) => $p['xy'] !== null)->values(),
 
             'districts' => District::orderBy('sort')->get(['name', 'slug', 'image', 'stats']),

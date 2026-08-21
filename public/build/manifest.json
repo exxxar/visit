@@ -65,7 +65,7 @@
     "isEntry": true
   },
   "resources/css/landing.css": {
-    "file": "assets/landing-DVQtC_en.css",
+    "file": "assets/landing-CSjfnJhc.css",
     "src": "resources/css/landing.css",
     "isEntry": true
   },
@@ -404,10 +404,13 @@
     ]
   },
   "resources/js/landing.js": {
-    "file": "assets/landing-Byt1-BnL.js",
+    "file": "assets/landing-Bo_Lohz5.js",
     "name": "landing",
     "src": "resources/js/landing.js",
-    "isEntry": true
+    "isEntry": true,
+    "css": [
+      "assets/landing-GRinvwPn.css"
+    ]
   },
   "resources/js/place.js": {
     "file": "assets/place-CAp7Lo6J.js",

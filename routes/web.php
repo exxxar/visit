@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Account;
+use App\Http\Controllers\EventPageController;
 use App\Http\Controllers\PlacePageController;
 use App\Http\Controllers\PostPageController;
 use App\Http\Controllers\ProfileController;
@@ -13,6 +14,7 @@ Route::get('/', App\Http\Controllers\LandingController::class)->name('landing');
 
 Route::get('/place/{place:slug}', [PlacePageController::class, 'show'])->name('place.show');
 Route::get('/post/{post:slug}', [PostPageController::class, 'show'])->name('post.show');
+Route::get('/event/{event:slug}', [EventPageController::class, 'show'])->name('event.show');
 
 /* ---------- «хаб» вместо Breeze-dashboard: развоз по ролям ---------- */
 Route::middleware('auth')->name('dashboard')->get('/dashboard', function (Request $request) {

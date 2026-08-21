@@ -31,4 +31,7 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'maptiler' => [
+        'key' => env('MAPTILER_KEY'),
+    ],
 ];
