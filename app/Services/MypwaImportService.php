@@ -265,6 +265,7 @@ class MypwaImportService
                 'contact_phone'    => $contactPhone ?? '-',
                 'contact_email'    => $contactEmail ?? '-',
                 'status'           => ApplicationStatus::New,
+                'category'           => '',
                 'external_id'      => $externalId,
                 'external_source'  => self::SOURCE,
             ]);
