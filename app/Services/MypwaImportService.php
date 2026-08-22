@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Application;
 use App\Models\Category;
 use App\Models\District;
+use App\Models\Place;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -15,23 +16,26 @@ class MypwaImportService
     protected const SOURCE = 'mypwa.ru';
     protected const DAYS_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-    public function __construct(
-        protected string $apiUrl,
-        protected string $token,
-        protected int $timeout,
-    ) {}
-
-    public static function fromConfig(): self
+    protected function apiUrl(): string
     {
-        $c = config('services.mypwa');
-        return new self($c['api_url'], $c['token'], $c['timeout']);
+        return config('services.mypwa.api_url', 'https://mypwa.ru/api/v1');
+    }
+
+    protected function token(): string
+    {
+        return config('services.mypwa.token', '');
+    }
+
+    protected function timeout(): int
+    {
+        return (int) config('services.mypwa.timeout', 30);
     }
 
     protected function http(): PendingRequest
     {
-        return Http::baseUrl($this->apiUrl)
-            ->withToken($this->token)
-            ->timeout($this->timeout)
+        return Http::baseUrl($this->apiUrl())
+            ->withToken($this->token())
+            ->timeout($this->timeout())
             ->acceptJson();
     }
 
@@ -92,7 +96,7 @@ class MypwaImportService
         if (Application::where('external_source', self::SOURCE)->where('external_id', $externalId)->exists()) {
             return false;
         }
-        if (\App\Models\Place::where('external_source', self::SOURCE)->where('external_id', $externalId)->exists()) {
+        if (Place::where('external_source', self::SOURCE)->where('external_id', $externalId)->exists()) {
             return false;
         }
 
@@ -102,7 +106,7 @@ class MypwaImportService
         $coords = $this->parseCoords($settings['shop_coords'] ?? null);
         $schedule = $this->parseSchedule($settings['schedule'] ?? []);
 
-        $defaultCategory = Category::first(); // подставь нужную дефолтную, например "Магазины"
+        $defaultCategory = Category::first();
 
         Application::create([
             'org_name'         => $tenant['name'] ?? 'Без названия',
@@ -157,8 +161,6 @@ class MypwaImportService
 
     protected function guessDistrict(array $coords): ?int
     {
-        // если есть координаты — можно добавить логику определения района по полигону.
-        // пока — первый район или null
         if (!$coords['lat'] || !$coords['lng']) return null;
         return District::first()?->id;
     }
