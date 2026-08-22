@@ -102,7 +102,7 @@ class Application extends Model
             );
         }
 
-        $this->update(['status' => 'approved', 'place_id' => $place->id]);
+        $this->update(['status' => 'approved']);
 
         return $place;
     }
