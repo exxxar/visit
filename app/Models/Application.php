@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -93,10 +94,12 @@ class Application extends Model
 
         /* 5. Письмо */
         if ($isNewUser) {
+            Log::info("PlaceApprovedWithCredentialsMail".($owner->email??'----'));
             Mail::to($owner->email)->send(
                 new PlaceApprovedWithCredentialsMail($place, $owner, $plainPassword)
             );
         } else {
+            Log::info("PlaceApprovedMail".($owner->email??'----'));
             Mail::to($owner->email)->send(
                 new PlaceApprovedMail($place, $owner)
             );
