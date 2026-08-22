@@ -34,25 +34,46 @@ class MypwaImportService
 
     protected function http(): PendingRequest
     {
-        return Http::baseUrl($this->apiUrl())
-            ->withToken($this->token())
+        $client = Http::baseUrl($this->apiUrl())
             ->timeout($this->timeout())
             ->connectTimeout(10)
-            ->retry(2, 500)   // 2 попытки с задержкой 500мс
             ->acceptJson();
+
+        // Добавляем токен только если он не пустой
+        $token = $this->token();
+        if ($token && $token !== '') {
+            $client = $client->withToken($token);
+        }
+
+        return $client;
     }
 
-    /**
-     * Получает список тенантов
-     */
     public function fetchTenants(): array
     {
-        $url = $this->apiUrl() . '/tenants/export';
-        Log::info('[MYPWA] Начинаем запрос списка тенантов', [
-            'url'     => $url,
-            'token'   => $this->token() ? substr($this->token(), 0, 8) . '...' : 'EMPTY',
+        $url = $this->apiUrl();
+        $token = $this->token();
+
+        Log::info('[MYPWA] === НАЧАЛО ИМПОРТА ===');
+        Log::info('[MYPWA] Конфигурация', [
+            'api_url' => $url,
+            'token'   => $token ? substr($token, 0, 8) . '...' : 'EMPTY',
             'timeout' => $this->timeout(),
         ]);
+
+        // Проверяем, что URL не пустой
+        if (empty($url)) {
+            Log::error('[MYPWA] api_url пустой! Проверь config/services.php и .env');
+            throw new \RuntimeException('api_url не настроен');
+        }
+
+        $endpoint = $url . '/tenants/export';
+        Log::info('[MYPWA] Отправляем запрос', [
+            'endpoint' => $endpoint,
+            'method'   => 'GET',
+            'params'   => ['include' => 'settings', 'active' => 1],
+        ]);
+
+        $startTime = microtime(true);
 
         try {
             $response = $this->http()->get('/tenants/export', [
@@ -60,55 +81,52 @@ class MypwaImportService
                 'active'  => 1,
             ]);
 
+            $elapsed = round(microtime(true) - $startTime, 2);
+
             Log::info('[MYPWA] Ответ получен', [
-                'status'     => $response->status(),
-                'size_bytes' => strlen($response->body()),
-                'headers'    => $response->headers()->all(),
+                'status'      => $response->status(),
+                'elapsed_sec' => $elapsed,
+                'body_size'   => strlen($response->body()),
             ]);
 
             if (!$response->ok()) {
-                Log::error('[MYPWA] Не-200 ответ', [
+                Log::error('[MYPWA] HTTP ошибка', [
                     'status' => $response->status(),
                     'body'   => Str::limit($response->body(), 500),
                 ]);
-                throw new \RuntimeException(
-                    'mypwa вернул HTTP ' . $response->status() . ': ' . Str::limit($response->body(), 200)
-                );
+                throw new \RuntimeException('HTTP ' . $response->status());
             }
 
             $data = $response->json();
-            Log::info('[MYPWA] JSON распарсен', [
-                'has_data' => is_array($data),
-                'keys'     => is_array($data) ? array_keys($data) : 'not array',
-            ]);
-
             $tenants = $data['data'] ?? $data;
+
             if (!is_array($tenants)) {
-                Log::error('[MYPWA] Неверный формат ответа', ['data_type' => gettype($tenants)]);
-                throw new \RuntimeException('Неверный формат ответа от mypwa (ожидался массив)');
+                Log::error('[MYPWA] Неверный формат ответа', ['type' => gettype($tenants)]);
+                throw new \RuntimeException('Неверный формат ответа');
             }
 
             Log::info('[MYPWA] Получено тенантов: ' . count($tenants));
 
             return $tenants;
 
-        } catch (RequestException $e) {
-            Log::error('[MYPWA] HTTP RequestException', [
-                'status'  => $e->response?->status(),
-                'body'    => Str::limit($e->response?->body(), 300),
-                'message' => $e->getMessage(),
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            $elapsed = round(microtime(true) - $startTime, 2);
+            Log::error('[MYPWA] ConnectionException (таймаут/сеть)', [
+                'elapsed_sec' => $elapsed,
+                'message'     => $e->getMessage(),
             ]);
-            throw $e;
+            throw new \RuntimeException('Не удалось подключиться к mypwa.ru: ' . $e->getMessage());
+
         } catch (\Throwable $e) {
-            Log::error('[MYPWA] Ошибка fetchTenants', [
-                'class'   => get_class($e),
-                'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
+            $elapsed = round(microtime(true) - $startTime, 2);
+            Log::error('[MYPWA] Ошибка запроса', [
+                'elapsed_sec' => $elapsed,
+                'class'       => get_class($e),
+                'message'     => $e->getMessage(),
             ]);
             throw $e;
         }
     }
-
     /**
      * Импортирует все тенанты
      */
