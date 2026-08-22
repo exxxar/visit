@@ -45,7 +45,7 @@ Route::middleware(['auth', 'verified', 'admin.access'])
             });
 
         Route::resource('places', Admin\PlaceController::class)
-            ->only(['index', 'edit', 'update', 'destroy']);
+            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
         Route::post('places/{place}/photos', [Admin\PlaceController::class, 'addPhoto']);
 
