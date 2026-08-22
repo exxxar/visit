@@ -98,7 +98,12 @@
             <div class="pl-actions">
                 <a class="btn btn-grad" href="tel:{{ preg_replace('/[^+\d]/', '', $place->phone) }}">📞 Позвонить</a>
                 <a class="btn btn-ghost" target="_blank" rel="nofollow"
-                   href="https://yandex.ru/maps/?text={{ $place->lat }},{{ $place->lng }}"> Маршрут</a>
+                   href="https://yandex.ru/maps/?text={{ $place->lat }},{{ $place->lng }}">Маршрут</a>
+                @if($place->external_id && $place->external_source === 'mypwa.ru')
+                    <button type="button" class="btn btn-ghost" id="openMenuBtn" data-place-id="{{ $place->id }}">
+                        📋 Меню
+                    </button>
+                @endif
             </div>
 
             @if($place->working_hours)
@@ -174,5 +179,32 @@
 </main>
 
 <div class="toast" id="toast"></div>
+
+<!-- Модалка меню / прайс-листа -->
+<div class="menu-modal" id="menuModal">
+    <div class="menu-modal__backdrop" data-close-menu></div>
+    <div class="menu-modal__panel">
+        <div class="menu-modal__head">
+            <div>
+                <div class="menu-modal__kicker">Прайс-лист</div>
+                <h3 class="menu-modal__title" id="menuTitle">{{ $place->name }}</h3>
+                <div class="menu-modal__meta" id="menuMeta"></div>
+            </div>
+            <button class="menu-modal__close" data-close-menu aria-label="Закрыть">✕</button>
+        </div>
+
+        <div class="menu-modal__search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="menuSearch" placeholder="Поиск по меню…">
+            <button type="button" class="menu-modal__clear" id="menuSearchClear" hidden>✕</button>
+        </div>
+
+        <div class="menu-modal__body" id="menuBody">
+            {{-- сюда рендерится контент --}}
+        </div>
+    </div>
+</div>
 </body>
 </html>

@@ -89,6 +89,7 @@ class Application extends Model
             'external_id'       => $this->external_id,
             'external_source'   => $this->external_source,
             'owner_id'          => $owner->id,
+
             'status'            => ModerationAction::Approved,
         ]);
 
@@ -111,6 +112,11 @@ class Application extends Model
     }
 
     /* ---------- хелперы ---------- */
+
+    public function isImportedFromMypwa(): bool
+    {
+        return $this->external_source === 'mypwa.ru' && !empty($this->external_id);
+    }
 
     protected function resolveCategoryId(): ?int
     {

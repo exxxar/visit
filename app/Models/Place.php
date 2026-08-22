@@ -22,6 +22,7 @@ class Place extends Model
         'short_description', 'description', 'address', 'lat', 'lng',
         'phone', 'email', 'site', 'socials', 'working_hours',
         'price_level', 'status', 'is_featured',
+        'external_id', 'external_source',
     ];
 
 

@@ -1083,6 +1083,177 @@ storyMediaEl.addEventListener('click', e => {
     else if (x > rect.width * 2 / 3) nextStory();
 });
 
+/* ============ МОДАЛКА МЕНЮ ============ */
+const menuModal   = document.getElementById('menuModal');
+const menuBody    = document.getElementById('menuModal')?.querySelector('#menuBody');
+const menuMeta    = document.getElementById('menuMeta');
+const menuSearch  = document.getElementById('menuSearch');
+const menuSearchClear = document.getElementById('menuSearchClear');
+const openMenuBtn = document.getElementById('openMenuBtn');
+
+let menuItems = [];
+let menuLoaded = false;
+
+if (openMenuBtn && menuModal) {
+    openMenuBtn.addEventListener('click', async () => {
+        openMenu();
+        if (!menuLoaded) await loadMenu(openMenuBtn.dataset.placeId);
+    });
+
+    document.querySelectorAll('[data-close-menu]').forEach(el => {
+        el.addEventListener('click', closeMenu);
+    });
+
+    menuSearch.addEventListener('input', (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        menuSearchClear.hidden = !q;
+        renderMenuItems(q);
+    });
+
+    menuSearchClear.addEventListener('click', () => {
+        menuSearch.value = '';
+        menuSearchClear.hidden = true;
+        renderMenuItems('');
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && menuModal.classList.contains('open')) closeMenu();
+    });
+}
+
+function openMenu() {
+    menuModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMenu() {
+    menuModal.classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+async function loadMenu(placeId) {
+    menuBody.innerHTML = `
+        <div class="menu-modal__state">
+            <div class="menu-modal__spinner"></div>
+            <p>Загружаем меню…</p>
+        </div>`;
+
+    try {
+        const res = await fetch(`/api/v1/places/${placeId}/menu`, {
+            headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        menuItems = Array.isArray(data.data) ? data.data : [];
+        menuLoaded = true;
+
+        menuMeta.textContent = menuItems.length
+            ? `${menuItems.length} ${pluralize(menuItems.length, ['позиция', 'позиции', 'позиций'])}`
+            : 'Меню пока пустое';
+
+        renderMenuItems('');
+    } catch (err) {
+        menuBody.innerHTML = `
+            <div class="menu-modal__state menu-modal__state--error">
+                <div class="menu-modal__ico">⚠</div>
+                <h4>Не удалось загрузить меню</h4>
+                <p>Попробуйте обновить страницу или загляните позже</p>
+            </div>`;
+    }
+}
+
+function renderMenuItems(query) {
+    if (!menuItems.length) {
+        menuBody.innerHTML = `
+            <div class="menu-modal__state">
+                <div class="menu-modal__ico">📋</div>
+                <h4>Меню пока не добавлено</h4>
+                <p>Владелец заведения скоро его опубликует</p>
+            </div>`;
+        return;
+    }
+
+    const q = (query || '').trim().toLowerCase();
+    const filtered = q
+        ? menuItems.filter(it =>
+            (it.name || '').toLowerCase().includes(q) ||
+            (it.description || '').toLowerCase().includes(q) ||
+            (it.category || '').toLowerCase().includes(q)
+        )
+        : menuItems;
+
+    if (!filtered.length) {
+        menuBody.innerHTML = `
+            <div class="menu-modal__state">
+                <div class="menu-modal__ico">🔍</div>
+                <h4>Ничего не найдено</h4>
+                <p>Попробуйте изменить поисковый запрос</p>
+            </div>`;
+        return;
+    }
+
+    // Группируем по категориям
+    const grouped = {};
+    filtered.forEach(it => {
+        const cat = it.category || 'Без категории';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(it);
+    });
+
+    const html = Object.entries(grouped).map(([cat, items]) => `
+        <section class="menu-modal__group">
+            <h4 class="menu-modal__group-title">${escapeHtml(cat)}</h4>
+            <div class="menu-modal__grid">
+                ${items.map(renderItem).join('')}
+            </div>
+        </section>
+    `).join('');
+
+    menuBody.innerHTML = html;
+}
+
+function renderItem(it) {
+    const price = typeof it.price === 'number'
+        ? new Intl.NumberFormat('ru-RU').format(it.price) + ' ₽'
+        : '—';
+
+    return `
+        <article class="menu-item">
+            ${it.image ? `
+                <div class="menu-item__img">
+                    <img src="${escapeAttr(it.image)}" alt="${escapeAttr(it.name)}" loading="lazy">
+                </div>
+            ` : `
+                <div class="menu-item__img menu-item__img--placeholder">🍽</div>
+            `}
+            <div class="menu-item__body">
+                <h5 class="menu-item__name">${escapeHtml(it.name)}</h5>
+                ${it.description ? `<p class="menu-item__desc">${escapeHtml(it.description)}</p>` : ''}
+                <div class="menu-item__foot">
+                    <span class="menu-item__price">${price}</span>
+                    ${it.weight ? `<span class="menu-item__weight">${escapeHtml(it.weight)}</span>` : ''}
+                </div>
+            </div>
+        </article>
+    `;
+}
+
+function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, s => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[s]));
+}
+function escapeAttr(str) { return escapeHtml(str); }
+
+function pluralize(n, forms) {
+    n = Math.abs(n) % 100;
+    const n1 = n % 10;
+    if (n > 10 && n < 20) return forms[2];
+    if (n1 > 1 && n1 < 5) return forms[1];
+    if (n1 === 1) return forms[0];
+    return forms[2];
+}
+
 /* ---------- предзагрузка историй при старте ---------- */
 loadStories();
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\PlaceController;
+use App\Http\Controllers\Api\PlaceMenuController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\StoryController;
@@ -23,6 +24,9 @@ Route::prefix('v1')->group(function () {
     Route::get('places', [PlaceController::class, 'index']);
     Route::get('places/{slug}', [PlaceController::class, 'show']);
     Route::post('places/{place:slug}/reviews', [ReviewController::class, 'store'])
+        ->middleware('throttle:public');
+
+    Route::get('places/{place}/menu', [PlaceMenuController::class, 'show'])
         ->middleware('throttle:public');
 
     // контент
