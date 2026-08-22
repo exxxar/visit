@@ -47,8 +47,6 @@ Route::middleware(['auth', 'verified', 'admin.access'])
         Route::resource('places', Admin\PlaceController::class)
             ->only(['index', 'edit', 'update', 'destroy']);
 
-
-
         Route::post('places/{place}/photos', [Admin\PlaceController::class, 'addPhoto']);
 
         Route::post('places/{place}/featured', [Admin\PlaceController::class, 'toggleFeatured'])
@@ -56,7 +54,10 @@ Route::middleware(['auth', 'verified', 'admin.access'])
         Route::get('places/{place}/analytics', [Admin\PlaceController::class, 'analytics'])
             ->name('places.analytics');
 
-
+        Route::get('stories', [Admin\StoryController::class, 'index'])->name('stories.index');
+        Route::post('stories', [Admin\StoryController::class, 'store'])->name('stories.store');
+        Route::post('stories/{story}/act', [Admin\StoryController::class, 'act'])->name('stories.act');
+        Route::delete('stories/{story}', [Admin\StoryController::class, 'destroy'])->name('stories.destroy');
 
         Route::resource('users', Admin\UserController::class)
             ->only(['index', 'store', 'update', 'destroy']);
@@ -84,6 +85,10 @@ Route::middleware(['auth', 'verified', 'role:business|admin'])
         Route::put('places/{place:slug}',         [Account\PlaceController::class, 'update'])->name('places.update');
         Route::post('places/{place:slug}/photos', [Account\PlaceController::class, 'addPhoto'])->name('places.photos');
         Route::get('places/{place:slug}/analytics', [Account\AnalyticsController::class, 'show'])->name('analytics');
+
+        Route::get('stories', [Account\StoryController::class, 'index'])->name('stories.index');
+        Route::post('stories', [Account\StoryController::class, 'store'])->name('stories.store');
+        Route::delete('stories/{story}', [Account\StoryController::class, 'destroy'])->name('stories.destroy');
 
         Route::get('news',     [Account\NewsController::class, 'index'])->name('news.index');
         Route::post('news',    [Account\NewsController::class, 'store'])->name('news.store');

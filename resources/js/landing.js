@@ -883,4 +883,207 @@ function jumpToCategory(cat, label) {
     toast(`Показаны заведения: ${label || cat}`);
 }
 
+
+/* ============ ИСТОРИИ ============ */
+let storiesActual = [], storiesArchive = [], storyIndex = 0, storyQueue = [];
+let storyTimer = null, storyProgressRaf = null;
+
+const storiesModal  = $('#storiesModal');
+const storyViewer   = $('#storyViewer');
+const storyMediaEl  = $('#storyMedia');
+const storyProgress = $('#storyProgress');
+
+/* ---------- загрузка ---------- */
+async function fetchStories(kind) {
+    const url = kind === 'archive' ? '/api/v1/stories/archive' : '/api/v1/stories';
+    try {
+        const r = await fetch(url, { headers: { Accept: 'application/json' } });
+        const d = await r.json();
+        return d.data ?? [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function renderStoryGrid(list, container, isArchive) {
+    container.innerHTML = '';
+    const grid = document.createElement('div');
+    grid.className = 'stories-grid';
+
+    list.forEach((s, i) => {
+        const card = document.createElement('div');
+        card.className = 'story-card' + (isArchive ? ' story-card--archived' : '');
+        card.innerHTML = `
+            ${s.media_type === 'video'
+            ? `<video src="${s.media_url}" muted preload="metadata"></video><span class="story-card__video-ico">▶</span>`
+            : `<img src="${s.media_url}" alt="${s.title ?? ''}" loading="lazy">`}
+            <div class="story-card__overlay">
+                ${s.place ? `<div class="story-card__place">${s.place.name}</div>` : ''}
+                ${s.title ? `<div class="story-card__title">${s.title}</div>` : ''}
+            </div>`;
+        card.onclick = () => openStoryViewer(list, i);
+        grid.appendChild(card);
+    });
+
+    container.appendChild(grid);
+}
+
+async function loadStories() {
+    $('#storiesLoading').hidden = false;
+    $('#storiesEmpty').hidden = true;
+
+    const [actual, archive] = await Promise.all([fetchStories('actual'), fetchStories('archive')]);
+    storiesActual = actual;
+    storiesArchive = archive;
+
+    $('#storiesLoading').hidden = true;
+
+    renderStoryGrid(actual, $('#storiesActual'), false);
+    renderStoryGrid(archive, $('#storiesArchive'), true);
+
+    if (!actual.length && !archive.length) $('#storiesEmpty').hidden = false;
+
+    // бейдж на триггере
+    const badge = $('#storiesBadge');
+    if (actual.length) {
+        badge.textContent = actual.length;
+        badge.hidden = false;
+    } else {
+        badge.hidden = true;
+    }
+}
+
+/* ---------- модалка ---------- */
+$('#storiesTrigger').onclick = () => {
+    storiesModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    if (!storiesActual.length && !storiesArchive.length) loadStories();
+};
+
+$$('[data-close-stories]').forEach(el => el.onclick = closeStoriesModal);
+
+function closeStoriesModal() {
+    storiesModal.classList.remove('open');
+    if (!storyViewer.classList.contains('open')) document.body.style.overflow = '';
+}
+
+/* вкладки */
+$$('.stories-tab').forEach(tab => {
+    tab.onclick = () => {
+        $$('.stories-tab').forEach(t => t.classList.toggle('on', t === tab));
+        const target = tab.dataset.stab;
+        $('#storiesActual').hidden = target !== 'actual';
+        $('#storiesArchive').hidden = target !== 'archive';
+        $('#storiesEmpty').hidden = !((target === 'actual' && !storiesActual.length) || (target === 'archive' && !storiesArchive.length));
+    };
+});
+
+/* ---------- просмотрщик ---------- */
+function openStoryViewer(queue, index) {
+    storyQueue = queue;
+    storyIndex = index;
+    storyViewer.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    showStory();
+}
+
+function showStory() {
+    const s = storyQueue[storyIndex];
+    if (!s) return closeStoryViewer();
+
+    // регистрируем просмотр
+    fetch(`/api/v1/stories/${s.id}/view`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '' } }).catch(() => {});
+
+    // медиа
+    storyMediaEl.innerHTML = '';
+    let mediaEl;
+    if (s.media_type === 'video') {
+        mediaEl = document.createElement('video');
+        mediaEl.src = s.media_url;
+        mediaEl.controls = true;
+        mediaEl.autoplay = true;
+        mediaEl.muted = true;
+        mediaEl.playsInline = true;
+        mediaEl.onended = () => nextStory();
+        mediaEl.ontimeupdate = () => updateProgress(mediaEl.currentTime / (mediaEl.duration || 1));
+    } else {
+        mediaEl = document.createElement('img');
+        mediaEl.src = s.media_url;
+        mediaEl.alt = s.title ?? '';
+        startAutoProgress(7000); // фото — 7 сек
+    }
+    storyMediaEl.appendChild(mediaEl);
+
+    // текст справа
+    $('#storyPlace').textContent = s.place?.name ?? 'ВИЗИТ ДОНЕЦК';
+    $('#storyTitle').textContent = s.title ?? '';
+    $('#storyText').textContent = s.text ?? '';
+    $('#storySide').style.display = (s.title || s.text) ? '' : 'none';
+    // если текста нет — растягиваем медиа на всю ширину
+    $('.story-viewer__body').style.gridTemplateColumns = (s.title || s.text) ? '' : '1fr';
+}
+
+function updateProgress(ratio) {
+    storyProgress.style.width = Math.min(100, ratio * 100) + '%';
+}
+
+function startAutoProgress(duration) {
+    cancelProgress();
+    const start = performance.now();
+    const tick = (now) => {
+        const ratio = (now - start) / duration;
+        updateProgress(ratio);
+        if (ratio >= 1) { nextStory(); return; }
+        storyProgressRaf = requestAnimationFrame(tick);
+    };
+    storyProgressRaf = requestAnimationFrame(tick);
+}
+
+function cancelProgress() {
+    if (storyProgressRaf) { cancelAnimationFrame(storyProgressRaf); storyProgressRaf = null; }
+    if (storyTimer) { clearTimeout(storyTimer); storyTimer = null; }
+}
+
+function nextStory() {
+    cancelProgress();
+    if (storyIndex < storyQueue.length - 1) { storyIndex++; showStory(); }
+    else closeStoryViewer();
+}
+function prevStory() {
+    cancelProgress();
+    if (storyIndex > 0) { storyIndex--; showStory(); }
+}
+
+function closeStoryViewer() {
+    cancelProgress();
+    storyViewer.classList.remove('open');
+    storyMediaEl.innerHTML = '';
+    if (!storiesModal.classList.contains('open')) document.body.style.overflow = '';
+}
+
+/* навигация */
+$$('.story-viewer__nav').forEach(btn => {
+    btn.onclick = () => btn.dataset.nav === 'next' ? nextStory() : prevStory();
+});
+$$('[data-close-viewer]').forEach(el => el.onclick = closeStoryViewer);
+
+/* клавиатура */
+addEventListener('keydown', e => {
+    if (!storyViewer.classList.contains('open')) return;
+    if (e.key === 'ArrowRight') nextStory();
+    if (e.key === 'ArrowLeft')  prevStory();
+    if (e.key === 'Escape')     closeStoryViewer();
+});
+
+/* клик по краям медиа для навигации */
+storyMediaEl.addEventListener('click', e => {
+    const rect = storyMediaEl.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < rect.width / 3) prevStory();
+    else if (x > rect.width * 2 / 3) nextStory();
+});
+
+/* ---------- предзагрузка историй при старте ---------- */
+loadStories();
+
 goPage(0);

@@ -17,6 +17,7 @@ watch(() => page.props.flash?.error,   (m) => m && error(m),   { immediate: true
 const nav = [
     { href: '/account', icon: '📊', label: 'Дашборд', exact: true },
     { href: '/account/news', icon: '📰', label: 'Новости' },
+    { href: '/account/stories', icon: '🎞️', label: 'Мои истории' },
 ]
 const isOn = (i) => i.exact ? page.url === i.href : page.url.startsWith(i.href)
 </script>
