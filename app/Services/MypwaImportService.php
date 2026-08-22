@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\ApplicationStatus;
+use App\Enums\ModerationAction;
 use App\Models\Application;
 use App\Models\Category;
 use App\Models\District;
@@ -262,7 +264,7 @@ class MypwaImportService
                 'contact_name'     => $contactName,
                 'contact_phone'    => $contactPhone,
                 'contact_email'    => $contactEmail,
-                'status'           => 'pending',
+                'status'           => ApplicationStatus::New,
                 'external_id'      => $externalId,
                 'external_source'  => self::SOURCE,
             ]);
