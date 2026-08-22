@@ -42,6 +42,9 @@ Route::middleware(['auth', 'verified', 'admin.access'])
                 Route::get('/', 'index')->name('index');
                 Route::post('{type}/{id}', 'act')->name('act')
                     ->where('type', 'places|news|events|reviews|applications');
+
+                // ИМПОРТ С MYPWA.RU
+                Route::post('import/mypwa', 'importMypwa')->name('import.mypwa');
             });
 
         Route::resource('places', Admin\PlaceController::class)

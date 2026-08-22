@@ -18,12 +18,17 @@ class Application extends Model
 
     protected $fillable = ['user_id', 'org_name', 'category', 'district', 'address',
         'phone', 'email', 'site', 'description', 'contact_name', 'contact_position',
-        'contact_phone', 'contact_email', 'media', 'socials', 'status'];
+        'contact_phone', 'contact_email', 'media', 'socials', 'status',
+        'lat', 'lng', 'working_hours', 'external_id', 'external_source',
+        ];
 
     protected $casts = [
         'status' => ApplicationStatus::class,
         'media'  => 'array',
         'socials' => 'array',
+        'working_hours' => 'array',
+        'lat'           => 'float',
+        'lng'           => 'float',
     ];
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }

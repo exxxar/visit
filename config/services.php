@@ -34,4 +34,10 @@ return [
     'maptiler' => [
         'key' => env('MAPTILER_KEY'),
     ],
+
+    'mypwa' => [
+        'api_url' => env('MYPWA_API_URL', 'https://mypwa.ru/api/v1'),
+        'token'   => env('MYPWA_API_TOKEN'),
+        'timeout' => env('MYPWA_API_TIMEOUT', 30),
+    ],
 ];

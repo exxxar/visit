@@ -13,6 +13,7 @@ use App\Models\News;
 use App\Models\Place;
 use App\Models\Review;
 use App\Services\ModerationService;
+use App\Services\MypwaImportService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -78,5 +79,19 @@ class ModerationController extends Controller
         $service->handle($entity, $action, $comment);
 
         return back()->with('success', 'Готово: ' . $action->label());
+    }
+
+    public function importMypwa(MypwaImportService $service)
+    {
+        try {
+            $stats = $service->importAll();
+
+            return back()->with('success', sprintf(
+                'Импорт с mypwa.ru завершён: всего %d, создано заявок %d, пропущено (уже есть) %d, ошибок %d',
+                $stats['total'], $stats['created'], $stats['skipped'], $stats['errors']
+            ));
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Ошибка импорта: ' . $e->getMessage());
+        }
     }
 }
