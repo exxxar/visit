@@ -51,6 +51,7 @@ class ModerationController extends Controller
         ]);
     }
 
+
     public function act(Request $request, ModerationService $service, string $type, int $id)
     {
         $request->validate([
@@ -58,9 +59,25 @@ class ModerationController extends Controller
             'comment' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $entity  = $service->resolve($type, $id);
-        $service->handle($entity, ModerationAction::from($request->action), $request->comment);
+        $action = $request->action;
+        $comment = $request->comment;
 
-        return back()->with('success', 'Готово: ' . ModerationAction::from($request->action)->label());
+        if ($type === 'applications') {
+            $application = Application::findOrFail($id);
+
+            if ($action === 'approve') {
+                $place = $application->approve();
+                return back()->with('success', "Заявка одобрена. Заведение «{$place->name}» опубликовано, владельцу отправлено письмо.");
+            }
+
+            // отклонение
+            $application->update(['status' => 'rejected']);
+            return back()->with('success', 'Заявка отклонена');
+        }
+
+        $entity  = $service->resolve($type, $id);
+        $service->handle($entity, ModerationAction::from($action), $comment);
+
+        return back()->with('success', 'Готово: ' . ModerationAction::from($action)->label());
     }
 }

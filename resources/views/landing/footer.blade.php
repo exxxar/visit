@@ -13,6 +13,7 @@
             <div>
                 <h4>Проект</h4>
                 <a href="#" class="demo">О проекте</a>
+                <a href="{{ route('catalog') }}">Все заведения</a>
                 <a href="#business">Для бизнеса</a>
                 <a href="#print">Печатная версия</a>
                 <a href="#" class="demo">Реклама</a>

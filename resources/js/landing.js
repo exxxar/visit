@@ -296,11 +296,15 @@ function initRealMap() {
             if (!e.originalEvent.target.closest('.rpin')) closeCard();
         });
 
-        realMap.on('load', () => console.log('[MAP] style loaded, layers:', realMap.getStyle().layers.length));
+        realMap.on('load', () => {
+            loadDistrictBoundaries();
+            console.log('[MAP] style loaded, layers:', realMap.getStyle().layers.length);
+        });
         realMap.on('error', (e) => console.error('[MAP] error:', e.error?.message || e));
         realMap.on('sourcedata', (e) => {
             if (e.isSourceLoaded) console.log('[MAP] source loaded:', e.sourceId);
         });
+
 
         PLACES.filter(p => p.lat && p.lng).forEach(p => {
             const el = document.createElement('button');
@@ -322,6 +326,87 @@ function initRealMap() {
     } catch (err) {
         console.error('[MAP] Error initializing map:', err);
     }
+}
+
+function loadDistrictBoundaries() {
+    fetch('/data/districts.geojson')
+        .then(r => r.json())
+        .then(geojson => addDistrictLayers(geojson))
+        .catch(err => console.error('[MAP] GeoJSON load error:', err));
+}
+
+function addDistrictLayers(geojson) {
+    console.log("Test1")
+    if (realMap.getSource('districts')) {
+        // уже добавлено — выходим
+        return;
+    }
+    console.log("Test2")
+    realMap.addSource('districts', { type: 'geojson', data: geojson });
+
+    // Полупрозрачная заливка районов
+    realMap.addLayer({
+        id: 'districts-fill',
+        type: 'fill',
+        source: 'districts',
+        paint: {
+            'fill-color': '#22d3ee',
+            'fill-opacity': 0.10,
+        },
+    });
+
+    // Неоновые границы
+    realMap.addLayer({
+        id: 'districts-outline',
+        type: 'line',
+        source: 'districts',
+        paint: {
+            'line-color': '#22d3ee',
+            'line-width': 2,
+            'line-opacity': 0.85,
+        },
+    });
+
+
+
+    // Подписи через DOM — центроид каждого полигона
+    geojson.features.forEach(f => {
+        const coords = f.geometry.coordinates[0];
+        const centroid = coords.reduce(
+            (acc, [lng, lat]) => ({ lng: acc.lng + lng, lat: acc.lat + lat }),
+            { lng: 0, lat: 0 }
+        );
+        centroid.lng /= coords.length;
+        centroid.lat /= coords.length;
+
+        const label = document.createElement('div');
+        label.className = 'district-label';
+        label.textContent = f.properties.name;
+
+        new maplibregl.Marker({ element: label, anchor: 'center' })
+            .setLngLat([centroid.lng, centroid.lat])
+            .addTo(realMap);
+    });
+
+    // Hover-эффект
+    realMap.on('mouseenter', 'districts-fill', () => {
+        realMap.getCanvas().style.cursor = 'pointer';
+        realMap.setPaintProperty('districts-fill', 'fill-opacity', 0.25);
+        realMap.setPaintProperty('districts-outline', 'line-width', 3);
+    });
+    realMap.on('mouseleave', 'districts-fill', () => {
+        realMap.getCanvas().style.cursor = '';
+        realMap.setPaintProperty('districts-fill', 'fill-opacity', 0.10);
+        realMap.setPaintProperty('districts-outline', 'line-width', 2);
+    });
+
+    // Клик по району = фильтр + скролл
+    realMap.on('click', 'districts-fill', (e) => {
+        if (e.features.length) {
+            const name = e.features[0].properties.name;
+            goDistrict(name);
+        }
+    });
 }
 
 $('#districtSel').onchange = e => {
@@ -383,6 +468,17 @@ $$('#quick .chip[data-sc]').forEach(ch => ch.onclick = () => {
         return;
     }
     jumpCat(s);
+});
+
+/* ---------- карточки настроения ---------- */
+$$('#moods .m-card').forEach(card => {
+    card.style.cursor = 'pointer';
+    card.onclick = () => {
+        const mood = card.dataset.mood;
+        const msg = card.dataset.msg;
+        if (!mood) return;
+        jumpCat(mood, msg);
+    };
 });
 
 /* ============ РАЙОНЫ ============ */

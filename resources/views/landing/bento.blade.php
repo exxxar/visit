@@ -43,5 +43,25 @@
                 <a class="b-link" href="#">Смотреть все <i>→</i></a>
             </article>
         </div>
+
+        {{-- CTA к каталогу --}}
+        <div class="cat-cta reveal">
+            <div class="cat-cta__glow"></div>
+            <div class="cat-cta__content">
+                <div class="cat-cta__text">
+                    <h3>Не нашли нужную категорию?</h3>
+                    <p>В каталоге — все заведения города с поиском, фильтрами по районам и адресами на карте.</p>
+                </div>
+                <a href="/places" class="cat-cta__btn">
+                    <span class="cat-cta__btn-label">
+                        <span>Открыть каталог</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </span>
+                    <span class="cat-cta__btn-sub">1000+ заведений</span>
+                </a>
+            </div>
+        </div>
     </div>
 </section>

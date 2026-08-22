@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Account;
+use App\Http\Controllers\AfishaController;
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\EventPageController;
 use App\Http\Controllers\PlacePageController;
 use App\Http\Controllers\PostPageController;
@@ -12,9 +14,11 @@ use Illuminate\Support\Facades\Route;
 /* ---------- публичная часть ---------- */
 Route::get('/', App\Http\Controllers\LandingController::class)->name('landing');
 
+Route::get('/places', [CatalogController::class, 'index'])->name('catalog');
 Route::get('/place/{place:slug}', [PlacePageController::class, 'show'])->name('place.show');
 Route::get('/post/{post:slug}', [PostPageController::class, 'show'])->name('post.show');
 Route::get('/event/{event:slug}', [EventPageController::class, 'show'])->name('event.show');
+Route::get('/afisha', [AfishaController::class, 'index'])->name('afisha');
 
 /* ---------- «хаб» вместо Breeze-dashboard: развоз по ролям ---------- */
 Route::middleware('auth')->name('dashboard')->get('/dashboard', function (Request $request) {
