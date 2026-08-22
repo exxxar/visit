@@ -88,7 +88,7 @@ class Application extends Model
             'external_id'       => $this->external_id,
             'external_source'   => $this->external_source,
             'owner_id'          => $owner->id,
-            'status'            => PlaceStatus::Approved,
+            'status'            => ModerationAction::Approved,
         ]);
 
         /* 5. Письмо */
