@@ -59,25 +59,24 @@ class ModerationController extends Controller
             'comment' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $action = $request->action;
+        $action  = ModerationAction::from($request->action);  // ← сразу в enum
         $comment = $request->comment;
 
         if ($type === 'applications') {
             $application = Application::findOrFail($id);
 
-            if ($action === 'approve') {
+            if ($action === ModerationAction::Approved) {  // ← сравниваем enum'ы
                 $place = $application->approve();
                 return back()->with('success', "Заявка одобрена. Заведение «{$place->name}» опубликовано, владельцу отправлено письмо.");
             }
 
-            // отклонение
             $application->update(['status' => 'rejected']);
             return back()->with('success', 'Заявка отклонена');
         }
 
-        $entity  = $service->resolve($type, $id);
-        $service->handle($entity, ModerationAction::from($action), $comment);
+        $entity = $service->resolve($type, $id);
+        $service->handle($entity, $action, $comment);
 
-        return back()->with('success', 'Готово: ' . ModerationAction::from($action)->label());
+        return back()->with('success', 'Готово: ' . $action->label());
     }
 }
