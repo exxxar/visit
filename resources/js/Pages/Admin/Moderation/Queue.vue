@@ -159,10 +159,17 @@ const closeDetails = () => { detailsModal.value = null }
 
             <!-- Действия -->
             <div class="mrow__act">
-                <VButton v-if="tab === 'applications'" size="sm" variant="ghost" @click="openDetails(i)">👁 Детали</VButton>
-                <VButton size="sm" :busy="processing" @click="approve(tab, i.id)">✓ Одобрить</VButton>
-                <VButton size="sm" variant="ghost" @click="openModal(i, tab, 'returned')">↩ На правки</VButton>
-                <VButton size="sm" variant="danger" @click="openModal(i, tab, 'rejected')">✕ Отклонить</VButton>
+                <template v-if="!i.place_id">
+                    <VButton v-if="tab === 'applications'" size="sm" variant="ghost" @click="openDetails(i)">👁 Детали</VButton>
+                    <VButton size="sm" :busy="processing" @click="approve(tab, i.id)">✓ Одобрить</VButton>
+                    <VButton size="sm" variant="ghost" @click="openModal(i, tab, 'returned')">↩ На правки</VButton>
+                    <VButton size="sm" variant="danger" @click="openModal(i, tab, 'rejected')">✕ Отклонить</VButton>
+                </template>
+                <template v-else>
+                    <Link :href="`/place/${i.place?.slug ?? i.place_id}`" class="tlink">
+                        ✓ Заведение опубликовано
+                    </Link>
+                </template>
             </div>
         </div>
 

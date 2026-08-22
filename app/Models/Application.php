@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\HasModerationLogs;
 use App\Enums\ApplicationStatus;
 use App\Enums\ModerationAction;
+use App\Enums\ModerationStatus;
 use App\Mail\PlaceApprovedMail;
 use App\Mail\PlaceApprovedWithCredentialsMail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -71,27 +72,54 @@ class Application extends Model
             $districtId = District::orderBy('sort')->value('id');
         }
 
-        /* 4. Создание заведения */
-        $place = Place::create([
-            'name'              => $this->org_name,
-            'slug'              => $this->makeUniqueSlug(),
-            'category_id'       => $categoryId,
-            'district_id'       => $districtId,
-            'address'           => $this->address,
-            'phone'             => $this->phone,
-            'email'             => $this->email,
-            'site'              => $this->site,
-            'description'       => $this->description,
-            'socials'           => $this->socials,
-            'lat'               => $this->lat,
-            'lng'               => $this->lng,
-            'working_hours'     => $this->working_hours,
-            'external_id'       => $this->external_id,
-            'external_source'   => $this->external_source,
-            'owner_id'          => $owner->id,
+        /* 4. Если заведение с этим external_id уже существует — возвращаем его */
+        if ($this->external_id && $this->external_source) {
+            $existing = Place::where('external_source', $this->external_source)
+                ->where('external_id', $this->external_id)
+                ->first();
 
-            'status'            => ModerationAction::Approved,
-        ]);
+            if ($existing) {
+                // обновляем данные, если нужно (или просто возвращаем)
+                $existing->update([
+                    'status' => ModerationStatus::Approved,
+                ]);
+
+                $this->update([
+                    'status'   => 'approved',
+                    'place_id' => $existing->id,
+                ]);
+
+                return $existing;
+            }
+        }
+
+        /* 5. Иначе создаём новое заведение */
+        try {
+            $place = Place::create([
+                'name'              => $this->org_name,
+                'slug'              => $this->makeUniqueSlug(),
+                'category_id'       => $categoryId,
+                'district_id'       => $districtId,
+                'address'           => $this->address,
+                'phone'             => $this->phone,
+                'email'             => $this->email,
+                'site'              => $this->site,
+                'description'       => $this->description,
+                'socials'           => $this->socials,
+                'lat'               => $this->lat,
+                'lng'               => $this->lng,
+                'working_hours'     => $this->working_hours,
+                'owner_id'          => $owner->id,
+                'status'            => ModerationStatus::Approved,
+                'external_id'       => $this->external_id,
+                'external_source'   => $this->external_source,
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Fallback: конкурентный запрос уже создал заведение — находим его
+            $place = Place::where('external_source', $this->external_source)
+                ->where('external_id', $this->external_id)
+                ->firstOrFail();
+        }
 
         /* 5. Письмо */
         if ($isNewUser) {

@@ -66,7 +66,12 @@ class ModerationController extends Controller
         if ($type === 'applications') {
             $application = Application::findOrFail($id);
 
-            if ($action === ModerationAction::Approved) {  // ← сравниваем enum'ы
+            // защита от повторного одобрения
+            if ($application->place_id) {
+                return back()->with('warning', "Заявка уже одобрена, заведение «{$application->place->name}» опубликовано.");
+            }
+
+            if ($action === ModerationAction::Approved) {
                 $place = $application->approve();
                 return back()->with('success', "Заявка одобрена. Заведение «{$place->name}» опубликовано, владельцу отправлено письмо.");
             }
