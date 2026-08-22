@@ -30,7 +30,6 @@ const submit = () => form.post('/login')
             </form>
 
             <p class="auth__foot">Нет аккаунта? <a href="/register">Зарегистрировать заведение</a></p>
-            <p class="auth__demo">демо: admin@vizit-donetsk.ru · editor@… · owner@… / password</p>
         </div>
     </div>
 </template>
