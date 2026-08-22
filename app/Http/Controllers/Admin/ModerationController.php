@@ -56,11 +56,11 @@ class ModerationController extends Controller
     public function act(Request $request, ModerationService $service, string $type, int $id)
     {
         $request->validate([
-            'action'  => ['required', Rule::enum(ModerationAction::class)],
+            'action'  => ['required', 'in:approve,reject,return'],
             'comment' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $action  = ModerationAction::from($request->action);  // ← сразу в enum
+        $action  = $request->action;
         $comment = $request->comment;
 
         if ($type === 'applications') {
@@ -68,22 +68,52 @@ class ModerationController extends Controller
 
             // защита от повторного одобрения
             if ($application->place_id) {
-                return back()->with('warning', "Заявка уже одобрена, заведение «{$application->place->name}» опубликовано.");
+                return back()->with('warning', "Заявка уже одобрена.");
             }
 
-            if ($action === ModerationAction::Approved) {
+            if ($action === 'approve') {
                 $place = $application->approve();
-                return back()->with('success', "Заявка одобрена. Заведение «{$place->name}» опубликовано, владельцу отправлено письмо.");
+                return back()->with('success', "Заявка одобрена. Заведение «{$place->name}» опубликовано.");
             }
 
-            $application->update(['status' => 'rejected']);
-            return back()->with('success', 'Заявка отклонена');
+            if ($action === 'reject') {
+                $application->update([
+                    'status' => ModerationStatus::Rejected,
+                    'rejection_comment' => $comment,
+                ]);
+                return back()->with('success', 'Заявка отклонена');
+            }
+
+            if ($action === 'return') {
+                $application->update([
+                    'status' => ModerationStatus::OnModeration,
+                    'return_comment' => $comment,
+                ]);
+                return back()->with('success', 'Заявка возвращена на правки');
+            }
         }
 
+        // для остальных типов (places, news, events, reviews)
         $entity = $service->resolve($type, $id);
-        $service->handle($entity, $action, $comment);
 
-        return back()->with('success', 'Готово: ' . $action->label());
+        $status = match ($action) {
+            'approve' => ModerationStatus::Approved,
+            'reject'  => ModerationStatus::Rejected,
+            'return'  => ModerationStatus::OnModeration,
+        };
+
+        $entity->update([
+            'status' => $status,
+            'moderation_comment' => $comment,
+        ]);
+
+        $label = match ($action) {
+            'approve' => 'Одобрено',
+            'reject'  => 'Отклонено',
+            'return'  => 'Вернуто на правки',
+        };
+
+        return back()->with('success', "Готово: {$label}");
     }
 
     public function importMypwa(MypwaImportService $service)
