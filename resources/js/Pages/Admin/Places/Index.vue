@@ -30,14 +30,17 @@ const destroy = (p) => {
 
 <template>
     <div>
-        <div class="pg-head"><h1>Заведения</h1></div>
-
-        <div style="margin-left:auto;display:flex;gap:10px">
-            <!-- твой поиск/фильтры, если есть -->
-            <Link href="/admin/places/create">
-                <VButton>+ Заведение</VButton>
-            </Link>
+        <div class="pg-head">
+            <h1>Заведения</h1>
+            <div style="margin-left:auto;display:flex;gap:10px">
+                <!-- твой поиск/фильтры, если есть -->
+                <Link href="/admin/places/create">
+                    <VButton>+ Заведение</VButton>
+                </Link>
+            </div>
         </div>
+
+
 
         <div class="vcard" style="margin-bottom:18px;display:flex;gap:12px;flex-wrap:wrap">
             <input v-model="f.q" class="inp" style="max-width:260px" placeholder="Поиск по названию…" @keyup.enter="apply">
