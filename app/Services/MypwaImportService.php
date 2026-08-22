@@ -201,21 +201,23 @@ class MypwaImportService
      *
      * @return true|string  true — создана, string — причина пропуска
      */
-    public function importOne(array $tenant)
+    public function importOne(array $tenant): bool
     {
-        $uuid = $tenant['uuid'] ?? null;
-        if (!$uuid) {
-            return 'no uuid';
+        $externalId = $tenant['uuid'] ?? null;
+        if (!$externalId) {
+            Log::warning('[MYPWA] Пропуск: нет uuid', ['tenant' => $tenant['name'] ?? 'unknown']);
+            return false;
         }
 
-        if (Application::where('external_source', self::SOURCE)->where('external_id', $uuid)->exists()) {
-            return 'application exists';
+        // проверка дубликата
+        if (Application::where('external_source', self::SOURCE)->where('external_id', $externalId)->exists()) {
+            return false;
         }
-        if (Place::where('external_source', self::SOURCE)->where('external_id', $uuid)->exists()) {
-            return 'place exists';
+        if (Place::where('external_source', self::SOURCE)->where('external_id', $externalId)->exists()) {
+            return false;
         }
 
-        $settings = $tenant['meta'] ?? $tenant['settings'] ?? [];
+        $settings = $tenant['meta'] ?? [];
         if (is_string($settings)) {
             $settings = json_decode($settings, true) ?? [];
         }
@@ -226,13 +228,22 @@ class MypwaImportService
         $defaultCategory = Category::first();
         if (!$defaultCategory) {
             Log::error('[MYPWA] В БД нет ни одной категории — импорт невозможен');
-            return 'no categories in DB';
+            throw new \RuntimeException('В БД нет ни одной категории');
         }
 
-        $address = $settings['address'] ?? '';
-        if (empty($address)) {
-            Log::warning("[MYPWA] Пустой адрес у $uuid — заявка будет без адреса");
-        }
+        // manager: пустые строки → null
+        $manager = $settings['manager'] ?? [];
+        $contactName  = !empty($manager['name'])  ? $manager['name']  : null;
+        $contactPhone = !empty($manager['phone']) ? $manager['phone'] : null;
+        $contactEmail = !empty($manager['email']) ? $manager['email'] : null;
+
+        // адрес: пустая строка → null
+        $address = !empty($settings['address']) ? $settings['address'] : null;
+
+        // описание
+        $shortName   = $tenant['short_name'] ?? null;
+        $description = $tenant['description'] ?? null;
+        $fullDesc    = trim(($shortName ? $shortName . ".\n" : '') . ($description ?? ''));
 
         try {
             $app = Application::create([
@@ -240,32 +251,75 @@ class MypwaImportService
                 'category_id'      => $defaultCategory->id,
                 'district_id'      => $this->guessDistrict($coords),
                 'address'          => $address,
-                'phone'            => $settings['manager']['phone'] ?? null,
-                'email'            => $settings['manager']['email'] ?? null,
+                'phone'            => $contactPhone,
+                'email'            => $contactEmail,
                 'site'             => "https://mypwa.ru/{$tenant['slug']}",
-                'description'      => trim(($tenant['short_name'] ? $tenant['short_name'] . ".\n" : '') . ($tenant['description'] ?? '')),
+                'description'      => $fullDesc ?: null,
                 'socials'          => ['mypwa_slug' => $tenant['slug'] ?? null],
                 'lat'              => $coords['lat'],
                 'lng'              => $coords['lng'],
                 'working_hours'    => $schedule,
-                'contact_name'     => $settings['manager']['name'] ?? null,
-                'contact_phone'    => $settings['manager']['phone'] ?? null,
-                'contact_email'    => $settings['manager']['email'] ?? null,
+                'contact_name'     => $contactName,
+                'contact_phone'    => $contactPhone,
+                'contact_email'    => $contactEmail,
                 'status'           => 'pending',
-                'external_id'      => $uuid,
+                'external_id'      => $externalId,
                 'external_source'  => self::SOURCE,
             ]);
 
-            Log::info("[MYPWA] Заявка создана id={$app->id} для uuid=$uuid");
+            Log::info("[MYPWA] ✓ Заявка создана id={$app->id}", [
+                'uuid'    => $externalId,
+                'name'    => $app->org_name,
+                'address' => $app->address,
+                'lat'     => $app->lat,
+                'lng'     => $app->lng,
+                'hours'   => count($app->working_hours ?? []),
+            ]);
+
             return true;
 
         } catch (\Throwable $e) {
-            Log::error("[MYPWA] Ошибка Application::create для uuid=$uuid", [
+            Log::error("[MYPWA] Ошибка Application::create", [
+                'uuid'  => $externalId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
         }
+    }
+
+    protected function parseSchedule(array $schedule): ?array
+    {
+        if (empty($schedule)) return null;
+
+        $out = [];
+        foreach (array_slice($schedule, 0, 7) as $i => $day) {
+            // пропускаем закрытые дни
+            if (!empty($day['closed'])) {
+                continue;
+            }
+
+            $from = $day['start_at'] ?? null;
+            $to   = $day['end_at']   ?? null;
+
+            if (empty($from) || empty($to)) {
+                continue;
+            }
+
+            // если есть day на русском — берём его, иначе используем индекс
+            $dayName = $day['day'] ?? self::DAYS_RU[$i] ?? null;
+
+            if (!$dayName) {
+                continue;
+            }
+
+            $out[] = [
+                'd'    => $dayName,
+                'from' => $from,
+                'to'   => $to,
+            ];
+        }
+
+        return $out ?: null;
     }
 
     protected function parseCoords(?string $raw): array
@@ -283,19 +337,7 @@ class MypwaImportService
         ];
     }
 
-    protected function parseSchedule(array $schedule): ?array
-    {
-        if (empty($schedule)) return null;
-        $out = [];
-        foreach (array_slice($schedule, 0, 7) as $i => $day) {
-            $from = $day['start_at'] ?? null;
-            $to   = $day['end_at']   ?? null;
-            if ($from && $to) {
-                $out[] = ['d' => self::DAYS_RU[$i] ?? ('Д' . ($i + 1)), 'from' => $from, 'to' => $to];
-            }
-        }
-        return $out ?: null;
-    }
+
 
     protected function guessDistrict(array $coords): ?int
     {
