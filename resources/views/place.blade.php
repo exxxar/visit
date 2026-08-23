@@ -72,10 +72,10 @@
     <div class="pl-grid">
         {{-- галерея --}}
         <div class="reveal">
-            <img id="plMain" class="pl-main" src="/{{ $place->cover_url }}" alt="{{ $place->name }}">
+            <img id="plMain" class="pl-main" src="{{ $place->cover_url }}" alt="{{ $place->name }}">
             <div class="pl-thumbs">
                 @foreach($place->photos as $ph)
-                    <img src="/{{ $ph->path }}" alt="" class="{{ $ph->is_cover ? 'on' : '' }}"
+                    <img src="{{ $ph->path }}" alt="" class="{{ $ph->is_cover ? 'on' : '' }}"
                          onclick="setMain(this)">
                 @endforeach
             </div>
@@ -179,7 +179,7 @@
             <div class="rail" style="margin-top:16px">
                 @foreach($similar as $p)
                     <a class="p-card" href="/place/{{ $p->slug }}">
-                        <div class="p-img"><img src="/{{ $p->cover_url }}" alt=""><span class="p-rate">★ {{ number_format($p->rating, 1, '.', '') }}</span></div>
+                        <div class="p-img"><img src="{{ $p->cover_url }}" alt=""><span class="p-rate">★ {{ number_format($p->rating, 1, '.', '') }}</span></div>
                         <div class="p-body"><h3>{{ $p->name }}</h3><p class="p-meta">{{ $p->category?->name }} · {{ $p->district?->name }}</p></div>
                     </a>
                 @endforeach
@@ -348,7 +348,7 @@
             <article class="menu-item">
                 ${it.image ? `
                     <div class="menu-item__img">
-                        <img src="/${escapeAttr(it.image)}" alt="${escapeAttr(it.name)}" loading="lazy"
+                        <img src="${escapeAttr(it.image)}" alt="${escapeAttr(it.name)}" loading="lazy"
                              onerror="this.parentElement.classList.add('menu-item__img--placeholder');this.parentElement.innerHTML='🍽'">
                     </div>
                 ` : `<div class="menu-item__img menu-item__img--placeholder">🍽</div>`}
