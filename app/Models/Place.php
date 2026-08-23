@@ -103,6 +103,11 @@ class Place extends Model
         return ['x' => $x, 'y' => $y];
     }
 
+    public function isImportedFromMypwa(): bool
+    {
+        return $this->external_source === 'mypwa.ru' && !empty($this->external_id);
+    }
+
     public function getCoverUrlAttribute(): ?string
     {
         return ($this->photos->firstWhere('is_cover', true) ?? $this->photos->first())?->path;

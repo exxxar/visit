@@ -15,13 +15,14 @@ class Event extends Model
     use HasFactory, SoftDeletes, Moderatable;
 
     protected $fillable = ['place_id', 'author_id', 'title', 'slug', 'description',
-        'type', 'starts_at', 'ends_at', 'image', 'price', 'status'];
+        'type', 'starts_at', 'ends_at', 'image', 'price', 'status', 'meta',];
 
     protected $casts = [
         'type'      => EventType::class,
         'status'    => ModerationStatus::class,
         'starts_at' => 'datetime',
         'ends_at'   => 'datetime',
+        'meta' => 'array',
     ];
 
     public function place(): BelongsTo  { return $this->belongsTo(Place::class); }

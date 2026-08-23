@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $place->name }} — {{ $place->category?->name }} в районе {{ $place->district?->name }} | ВИЗИТ ДОНЕЦК</title>
     <meta name="description" content="{{ $place->short_description }} Рейтинг {{ number_format($place->rating, 1, '.', '') }}, отзывов: {{ $place->reviews_count }}. Адрес: {{ $place->address }}.">
-    <link rel="canonical" href="{{ url()->current() }}">
+    <link rel="canonical" href="{{ request()->url() }}">
 
     {{-- Open Graph --}}
     <meta property="og:type" content="place">
     <meta property="og:title" content="{{ $place->name }} — ВИЗИТ ДОНЕЦК">
     <meta property="og:description" content="{{ $place->short_description }}">
-    <meta property="og:image" content="{{ url($place->cover_url) }}">
+    <meta property="og:image" content="{{ $place->cover_url ? asset($place->cover_url) : '' }}">
+    <meta property="og:url" content="{{ request()->url() }}">
     <meta property="og:locale" content="ru_RU">
 
     {{-- SEO: LocalBusiness --}}
@@ -21,7 +22,7 @@
             '@type'     => 'LocalBusiness',
             'name'      => $place->name,
             'description' => $place->short_description,
-            'image'     => url($place->cover_url),
+            'image'     => $place->cover_url ? asset($place->cover_url) : null,
             'telephone' => $place->phone,
             'url'       => $place->site,
             'priceRange' => str_repeat('$', $place->price_level),
@@ -85,7 +86,7 @@
             <div class="kicker">{{ $place->category?->icon }} {{ $place->category?->name }} · {{ $place->district?->name }}</div>
             <h1 style="font-size:clamp(24px,3vw,36px)">{{ $place->name }}</h1>
             <div class="pl-rate">
-                <span class="stars">{{ str_repeat('★', $place->rating) }}</span>
+                <span class="stars">{{ str_repeat('★', (int)$place->rating) }}</span>
                 <b>{{ number_format($place->rating, 1, '.', '') }}</b>
                 <span style="color:var(--mut)">{{ $place->reviews_count }} отзывов</span>
                 <span class="p-price" style="margin-left:auto">
@@ -95,13 +96,22 @@
 
             <p class="pl-addr">📍 {{ $place->address }}</p>
 
-            <div class="pl-actions">
+            <div class="pl-actions" style="flex-wrap:wrap;gap:8px">
                 <a class="btn btn-grad" href="tel:{{ preg_replace('/[^+\d]/', '', $place->phone) }}">📞 Позвонить</a>
                 <a class="btn btn-ghost" target="_blank" rel="nofollow"
                    href="https://yandex.ru/maps/?text={{ $place->lat }},{{ $place->lng }}">Маршрут</a>
                 @if($place->external_id && $place->external_source === 'mypwa.ru')
-                    <button type="button" class="btn btn-ghost" id="openMenuBtn" data-place-id="{{ $place->id }}">
-                        📋 Меню
+                    <button
+                        type="button"
+                        class="pl-menu-btn"
+                        id="openMenuBtn"
+                        data-place-id="{{ $place->id }}"
+                    >
+                        <span class="pl-menu-btn__ico">📋</span>
+                        <span class="pl-menu-btn__txt">
+                            <b>Меню</b>
+                            <small>Прайс-лист</small>
+                        </span>
                     </button>
                 @endif
             </div>
@@ -201,10 +211,172 @@
             <button type="button" class="menu-modal__clear" id="menuSearchClear" hidden>✕</button>
         </div>
 
-        <div class="menu-modal__body" id="menuBody">
-            {{-- сюда рендерится контент --}}
-        </div>
+        <div class="menu-modal__body" id="menuBody"></div>
     </div>
 </div>
+
+{{-- Встроенный JS для модалки меню --}}
+<script>
+    (function() {
+        const modal   = document.getElementById('menuModal');
+        const body    = document.getElementById('menuBody');
+        const meta    = document.getElementById('menuMeta');
+        const search  = document.getElementById('menuSearch');
+        const sClear  = document.getElementById('menuSearchClear');
+        const openBtn = document.getElementById('openMenuBtn');
+
+        if (!modal || !openBtn) return;
+
+        let items  = [];
+        let loaded = false;
+
+        /* ---------- открытие ---------- */
+        openBtn.addEventListener('click', async () => {
+            openMenu();
+            if (!loaded) await loadMenu(openBtn.dataset.placeId);
+        });
+
+        document.querySelectorAll('[data-close-menu]').forEach(el => {
+            el.addEventListener('click', closeMenu);
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && modal.classList.contains('open')) closeMenu();
+        });
+
+        search.addEventListener('input', e => {
+            const q = e.target.value.trim().toLowerCase();
+            sClear.hidden = !q;
+            renderMenu(q);
+        });
+        sClear.addEventListener('click', () => {
+            search.value = '';
+            sClear.hidden = true;
+            renderMenu('');
+        });
+
+        /* ---------- логика ---------- */
+        function openMenu() {
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeMenu() {
+            modal.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        async function loadMenu(placeId) {
+            body.innerHTML = `
+            <div class="menu-modal__state">
+                <div class="menu-modal__spinner"></div>
+                <p>Загружаем меню…</p>
+            </div>`;
+            try {
+                const r = await fetch(`/api/v1/places/${placeId}/menu`, {
+                    headers: { Accept: 'application/json' },
+                });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const data = await r.json();
+                items  = Array.isArray(data.data) ? data.data : [];
+                loaded = true;
+                meta.textContent = items.length
+                    ? `${items.length} ${pluralize(items.length, ['позиция','позиции','позиций'])}`
+                    : 'Меню пока пустое';
+                renderMenu('');
+            } catch (err) {
+                body.innerHTML = `
+                <div class="menu-modal__state menu-modal__state--error">
+                    <div class="menu-modal__ico">⚠</div>
+                    <h4>Не удалось загрузить меню</h4>
+                    <p>Попробуйте обновить страницу</p>
+                </div>`;
+            }
+        }
+
+        function renderMenu(query) {
+            if (!items.length) {
+                body.innerHTML = `
+                <div class="menu-modal__state">
+                    <div class="menu-modal__ico">📋</div>
+                    <h4>Меню пока не добавлено</h4>
+                </div>`;
+                return;
+            }
+            const q = (query || '').trim().toLowerCase();
+            const filtered = q
+                ? items.filter(it =>
+                    (it.name || '').toLowerCase().includes(q) ||
+                    (it.description || '').toLowerCase().includes(q) ||
+                    (it.category || '').toLowerCase().includes(q))
+                : items;
+
+            if (!filtered.length) {
+                body.innerHTML = `
+                <div class="menu-modal__state">
+                    <div class="menu-modal__ico">🔍</div>
+                    <h4>Ничего не найдено</h4>
+                </div>`;
+                return;
+            }
+
+            const grouped = {};
+            filtered.forEach(it => {
+                const cat = it.category || 'Без категории';
+                (grouped[cat] ||= []).push(it);
+            });
+
+            body.innerHTML = Object.entries(grouped).map(([cat, list]) => `
+            <section class="menu-modal__group">
+                <h4 class="menu-modal__group-title">${escape(cat)}</h4>
+                <div class="menu-modal__grid">
+                    ${list.map(renderItem).join('')}
+                </div>
+            </section>
+        `).join('');
+        }
+
+        function renderItem(it) {
+            const price = typeof it.price === 'number'
+                ? new Intl.NumberFormat('ru-RU').format(it.price) + ' ₽'
+                : '—';
+            const desc = (it.description || '')
+                .replace(/Цена:\s*\d+\s*(?:руб(?:лей)?|₽)\.?/gi, '')
+                .replace(/Вес:\s*\d+\s*(?:грамм|г|гр|мл|ml)[^.]*/gi, '')
+                .replace(/#[a-zA-Zа-яА-ЯёЁ]+/g, '')
+                .trim();
+
+            return `
+            <article class="menu-item">
+                ${it.image ? `
+                    <div class="menu-item__img">
+                        <img src="/${escapeAttr(it.image)}" alt="${escapeAttr(it.name)}" loading="lazy"
+                             onerror="this.parentElement.classList.add('menu-item__img--placeholder');this.parentElement.innerHTML='🍽'">
+                    </div>
+                ` : `<div class="menu-item__img menu-item__img--placeholder">🍽</div>`}
+                <div class="menu-item__body">
+                    <h5 class="menu-item__name">${escape(it.name)}</h5>
+                    ${desc ? `<p class="menu-item__desc">${escape(desc)}</p>` : ''}
+                    <div class="menu-item__foot">
+                        <span class="menu-item__price">${price}</span>
+                        ${it.weight ? `<span class="menu-item__weight">${escape(it.weight)}</span>` : ''}
+                    </div>
+                </div>
+            </article>`;
+        }
+
+        function escape(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c =>
+                ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+        }
+        function escapeAttr(s) { return escape(s); }
+        function pluralize(n, forms) {
+            n = Math.abs(n) % 100;
+            const n1 = n % 10;
+            if (n > 10 && n < 20) return forms[2];
+            if (n1 > 1 && n1 < 5) return forms[1];
+            if (n1 === 1) return forms[0];
+            return forms[2];
+        }
+    })();
+</script>
 </body>
 </html>

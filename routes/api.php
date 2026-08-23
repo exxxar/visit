@@ -31,6 +31,10 @@ Route::prefix('v1')->group(function () {
 
     // контент
     Route::get('events', [EventController::class, 'index']);
+
+    Route::post('events', [EventController::class, 'store'])
+        ->middleware('throttle:public');
+
     Route::get('posts', [PostController::class, 'index']);
     Route::get('posts/{slug}', [PostController::class, 'show']);
 

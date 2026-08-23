@@ -1,4 +1,4 @@
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { useToast } from './useToast'
 
@@ -14,7 +14,7 @@ export function useModeration() {
         processing.value = true
 
         router.post(`/admin/moderation/${type}/${id}`, {
-            action,      // 'approve' | 'reject' | 'return'
+            action,
             comment: text,
         }, {
             preserveScroll: true,
@@ -39,15 +39,17 @@ export function useModeration() {
     const approve = (type, id) => act(type, id, 'approve')
 
     function openModal(item, type, action) {
+        console.log('[MODERATION] openModal:', { item, type, action })
         modal.value = {
             type,
             id: item.id,
-            title: item.title ?? item.name ?? item.org_name,
-            action,  // 'reject' или 'return'
+            title: item.title ?? item.name ?? item.org_name ?? 'Без названия',
+            action,
         }
+        console.log('[MODERATION] modal.value set:', modal.value)
     }
 
-    const submitModal = () => {
+    function submitModal() {
         if (!modal.value) return
         act(
             modal.value.type,
@@ -57,13 +59,20 @@ export function useModeration() {
         )
     }
 
-    const closeModal = () => {
+    function closeModal() {
         modal.value = null
         comment.value = ''
     }
 
-    return reactive({
-        modal, comment, processing,
-        act, approve, openModal, submitModal, closeModal,
-    })
+    // ← БЕЗ reactive(), возвращаем сами ref'ы
+    return {
+        modal,
+        comment,
+        processing,
+        act,
+        approve,
+        openModal,
+        submitModal,
+        closeModal,
+    }
 }

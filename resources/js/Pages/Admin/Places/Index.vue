@@ -6,7 +6,7 @@ import VBadge from '@/Components/ui/VBadge.vue'
 import { useLabels } from '@/composables/useLabels'
 import { useDictionaryStore } from '@/stores/dictionary'
 import { useAuth } from '@/composables/useAuth'
-
+import AdminPlaceMenu from '@/Components/AdminPlaceMenu.vue'  // ← ДОБАВИТЬ
 
 const props = defineProps(['places'])
 const { L, badge } = useLabels()
@@ -66,6 +66,7 @@ const destroy = (p) => {
                     <td style="color:var(--lime)">{{ p.rating }}</td>
                     <td><VBadge v-bind="badge(L.moderation, p.status)" /></td>
                     <td style="text-align:right;white-space:nowrap">
+                        <AdminPlaceMenu :place="p" />
                         <Link class="tlink" :href="`/admin/places/${p.id}/analytics`">📈</Link>
                         <Link class="tlink" :href="`/admin/places/${p.id}/edit`">✏️</Link>
                         <button v-if="auth.can('manage ads')" class="tlink" @click="toggleFeatured(p)">✨</button>

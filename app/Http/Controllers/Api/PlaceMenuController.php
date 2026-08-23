@@ -17,15 +17,25 @@ class PlaceMenuController extends Controller
             return response()->json(['error' => 'Меню недоступно для этого заведения'], 404);
         }
 
-        $cacheKey = "mypwa_menu_{$place->external_id}";
+        // Режим отладки: кэш отключён, либо принудительный сброс по ?refresh=1
+        $isDebug   = config('app.debug', false);
+        $forceRefresh = $request->boolean('refresh');
+        $cacheTtl  = $isDebug ? 0 : 900; // 0 = не кэшировать
+        $cacheKey  = "mypwa_menu_{$place->external_id}";
 
-        $menu = Cache::remember($cacheKey, 900, function () use ($place) {
+        // Если ?refresh=1 — сбрасываем кэш перед запросом
+        if ($forceRefresh) {
+            Cache::forget($cacheKey);
+        }
+
+        $fetcher = function () use ($place) {
             try {
                 $url = rtrim(config('services.mypwa.api_url'), '/') . "/tenants/{$place->external_id}/products/export";
 
                 Log::info('[MYPWA] Fetching menu', [
-                    'uuid' => $place->external_id,
-                    'url'  => $url,
+                    'uuid'  => $place->external_id,
+                    'url'   => $url,
+                    'debug' => config('app.debug'),
                 ]);
 
                 $http = Http::timeout(15)->acceptJson();
@@ -53,7 +63,6 @@ class PlaceMenuController extends Controller
                     'count' => count($items),
                 ]);
 
-                // Нормализация: цена из строки во float, картинка, категория из хэштегов
                 return array_map([$this, 'normalizeItem'], $items);
 
             } catch (\Throwable $e) {
@@ -63,11 +72,18 @@ class PlaceMenuController extends Controller
                 ]);
                 return [];
             }
-        });
+        };
+
+        // При TTL=0 Cache::remember выполняет функцию каждый раз, не сохраняя результат
+        $menu = $cacheTtl > 0
+            ? Cache::remember($cacheKey, $cacheTtl, $fetcher)
+            : $fetcher();
 
         return response()->json([
-            'data'  => $menu,
-            'count' => count($menu),
+            'data'    => $menu,
+            'count'   => count($menu),
+            'cached'  => $cacheTtl > 0 && !$forceRefresh,  // для отладки видно, откуда данные
+            'debug'   => $isDebug,
         ]);
     }
 

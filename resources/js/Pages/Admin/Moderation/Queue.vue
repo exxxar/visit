@@ -159,16 +159,18 @@ const closeDetails = () => { detailsModal.value = null }
 
             <!-- Действия -->
             <div class="mrow__act">
-                <template v-if="!i.place_id">
+                <template v-if="tab === 'applications' ? !i.place_id : i.status !== 'approved'">
                     <VButton v-if="tab === 'applications'" size="sm" variant="ghost" @click="openDetails(i)">👁 Детали</VButton>
                     <VButton size="sm" :busy="processing" @click="approve(tab, i.id)">✓ Одобрить</VButton>
-                    <VButton size="sm" variant="ghost" @click="openModal(i, tab, 'returned')">↩ На правки</VButton>
-                    <VButton size="sm" variant="danger" @click="openModal(i, tab, 'rejected')">✕ Отклонить</VButton>
+                    <VButton size="sm" variant="ghost" @click="openModal(i, tab, 'return')">↩ На правки</VButton>
+                    <VButton size="sm" variant="danger" @click="openModal(i, tab, 'reject')">✕ Отклонить</VButton>
                 </template>
                 <template v-else>
-                    <Link :href="`/place/${i.place?.slug ?? i.place_id}`" class="tlink">
+                    <Link v-if="tab === 'applications'" :href="`/place/${i.place?.slug ?? i.place_id}`" class="tlink">
                         ✓ Заведение опубликовано
                     </Link>
+
+                    <span v-else class="tlink" style="color:var(--lime)">✓ Опубликовано</span>
                 </template>
             </div>
         </div>
@@ -179,7 +181,11 @@ const closeDetails = () => { detailsModal.value = null }
         </div>
 
         <!-- Модалка решения -->
-        <VModal :show="!!modal" :title="modal?.action === 'rejected' ? 'Отклонить' : 'Вернуть на правки'" @close="closeModal">
+        <VModal
+            :show="!!modal"
+            :title="modal?.action === 'reject' ? 'Отклонить' : 'Вернуть на правки'"
+            @close="closeModal"
+        >
             <p style="margin-top:0;color:var(--mut)">{{ modal?.title }}</p>
             <label class="lbl">Комментарий для владельца</label>
             <textarea v-model="comment" class="inp" rows="4" placeholder="Что нужно исправить…"></textarea>
@@ -228,8 +234,8 @@ const closeDetails = () => { detailsModal.value = null }
 
             <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
                 <VButton :busy="processing" @click="approve('applications', detailsModal.id); closeDetails()">✓ Одобрить</VButton>
-                <VButton variant="ghost" @click="openModal(detailsModal, 'applications', 'returned'); closeDetails()">↩ На правки</VButton>
-                <VButton variant="danger" @click="openModal(detailsModal, 'applications', 'rejected'); closeDetails()">✕ Отклонить</VButton>
+                <VButton variant="ghost" @click="openModal(detailsModal, 'applications', 'return'); closeDetails()">↩ На правки</VButton>
+                <VButton variant="danger" @click="openModal(detailsModal, 'applications', 'reject'); closeDetails()">✕ Отклонить</VButton>
             </div>
         </VModal>
     </div>
