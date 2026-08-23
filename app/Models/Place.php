@@ -110,6 +110,7 @@ class Place extends Model
 
     public function getCoverUrlAttribute(): ?string
     {
-        return ($this->photos->firstWhere('is_cover', true) ?? $this->photos->first())?->path;
+        $photo = $this->photos->firstWhere('is_cover', true) ?? $this->photos->first();
+        return $photo?->path;  // теперь path уже содержит /storage/...
     }
 }

@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\StoreAdminPlaceRequest;
 use App\Models\Place;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -37,9 +38,67 @@ class PlaceController extends Controller
         ]);
     }
 
+
     public function update(AdminPlaceRequest $request, Place $place)
     {
-        $place->update($request->validated() + ['is_featured' => $request->boolean('is_featured')]);
+        $data = $request->validated();
+
+        $place->update([
+            'name'              => $data['name'],
+            'category_id'       => $data['category_id'],
+            'district_id'       => $data['district_id'],
+            'address'           => $data['address'],
+            'lat'               => $data['lat'],
+            'lng'               => $data['lng'],
+            'phone'             => $data['phone'] ?? null,
+            'email'             => $data['email'] ?? null,
+            'site'              => $data['site'] ?? null,
+            'price_level'       => $data['price_level'],
+            'short_description' => $data['short_description'] ?? null,
+            'description'       => $data['description'] ?? null,
+            'working_hours'     => $data['working_hours'] ?? null,
+            'socials'           => $data['socials'] ?? null,
+            'is_featured'       => $request->boolean('is_featured'),
+            'status'            => $data['status'] ?? $place->status,
+        ]);
+
+        // 2. Удаляем выбранные фото
+        if ($deleteIds = $request->input('delete_photos', [])) {
+            $photos = $place->photos()->whereIn('id', (array) $deleteIds)->get();
+            foreach ($photos as $ph) {
+                // Убираем /storage/ для Storage::delete()
+                $rawPath = str_replace('/storage/', '', $ph->path);
+                Storage::disk('public')->delete($rawPath);
+                $ph->delete();
+            }
+        }
+
+        // 3. Добавляем новые фото
+        $newFiles = $request->file('photos', []);
+        $hasAnyPhoto = $place->photos()->exists();
+        $maxSort = $place->photos()->max('sort') ?? 0;
+
+        foreach ($newFiles as $i => $file) {
+            $relativePath = $file->store('places/' . $place->id, 'public');
+            $fullPath = '/storage/' . $relativePath;  // ← добавляем /storage/
+
+            $place->photos()->create([
+                'path'     => $fullPath,
+                'is_cover' => !$hasAnyPhoto && $i === 0,
+                'sort'     => $maxSort + $i + 1,
+            ]);
+            $hasAnyPhoto = true;
+        }
+
+        // 4. Обновляем обложку
+        $coverId = $request->input('cover_photo_id');
+        if ($coverId && $place->photos()->where('id', $coverId)->exists()) {
+            $place->photos()->update(['is_cover' => false]);
+            $place->photos()->where('id', $coverId)->update(['is_cover' => true]);
+        } elseif (!$place->photos()->where('is_cover', true)->exists()) {
+            $first = $place->photos()->orderBy('sort')->first();
+            if ($first) $first->update(['is_cover' => true]);
+        }
 
         return back()->with('success', 'Карточка сохранена');
     }
@@ -106,7 +165,7 @@ class PlaceController extends Controller
             'working_hours'     => $data['working_hours'] ?? null,
             'socials'           => $data['socials'] ?? null,
             'is_featured'       => $request->boolean('is_featured'),
-            'status'            => ModerationAction::Approved, // админ публикует сразу
+            'status'            => ModerationStatus::Approved,
             'owner_id'          => isset($data['owner_email'])
                 ? User::where('email', $data['owner_email'])->value('id')
                 : null,
@@ -114,9 +173,11 @@ class PlaceController extends Controller
 
         // фото: первое — обложка
         foreach ($request->file('photos', []) as $i => $file) {
-            $path = $file->store('places/' . $place->id, 'public');
+            $relativePath = $file->store('places/' . $place->id, 'public');
+            $fullPath = '/storage/' . $relativePath;  // ← добавляем /storage/
+
             $place->photos()->create([
-                'path'     => $path,
+                'path'     => $fullPath,
                 'is_cover' => $i === 0,
             ]);
         }

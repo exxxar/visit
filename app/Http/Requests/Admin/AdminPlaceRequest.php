@@ -31,6 +31,21 @@ class AdminPlaceRequest extends FormRequest
             'status'            => ['required', Rule::enum(ModerationStatus::class)],
             'is_featured'       => ['nullable', 'boolean'],
             'socials'           => ['nullable', 'array'],
+
+            'photos'            => ['nullable', 'array', 'max:10'],
+            'photos.*'          => ['file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'delete_photos'     => ['nullable', 'array'],
+            'delete_photos.*'   => ['integer', 'exists:place_photos,id'],
+            'cover_photo_id'    => ['nullable', 'integer', 'exists:place_photos,id'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'photos.*.max' => 'Каждое фото не более 5 МБ',
+            'photos.max'   => 'Не больше 10 фото',
+            'photos.*.mimes' => 'Допустимые форматы: JPG, PNG, WEBP',
         ];
     }
 }
