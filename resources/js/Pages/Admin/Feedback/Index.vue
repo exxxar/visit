@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import VModal from '@/Components/ui/VModal.vue'
 import { Link, router } from '@inertiajs/vue3'
 import VButton from '@/Components/ui/VButton.vue'
 import VBadge from '@/Components/ui/VBadge.vue'
@@ -7,6 +8,40 @@ import VBadge from '@/Components/ui/VBadge.vue'
 const props = defineProps(['feedbacks', 'subjects', 'counts'])
 
 const f = ref({ q: '', status: '', subject: '' })
+
+
+/* ---------- ответ ---------- */
+const replyModal = ref(null)
+const replyMessage = ref('')
+const replyLoading = ref(false)
+
+const isEmail = (contact) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)
+const telHref = (contact) => 'tel:' + contact.replace(/[^+\d]/g, '')
+
+const openReply = (fb) => {
+    replyModal.value = fb
+    replyMessage.value = ''
+}
+
+const closeReply = () => {
+    replyModal.value = null
+    replyMessage.value = ''
+}
+
+const sendReply = () => {
+    if (!replyMessage.value.trim()) return
+    replyLoading.value = true
+
+    router.post(`/admin/feedback/${replyModal.value.id}/reply`, {
+        message: replyMessage.value,
+    }, {
+        preserveScroll: true,
+        onFinish: () => {
+            replyLoading.value = false
+            closeReply()
+        },
+    })
+}
 
 const apply = () => router.get('/admin/feedback', { ...f.value }, { preserveScroll: true })
 
@@ -96,6 +131,11 @@ const formatDate = (d) => new Date(d).toLocaleString('ru-RU', {
             </div>
 
             <div class="fb-card__act">
+                <!-- Ответ по email -->
+                <VButton v-if="isEmail(fb.contact)" size="sm" @click="openReply(fb)">✉ Ответить</VButton>
+                <!-- Или звонок -->
+                <a v-else :href="telHref(fb.contact)" class="btn btn-sm btn-ghost">📞 Позвонить</a>
+
                 <select :value="fb.status" class="inp inp--sm" @change="setStatus(fb, $event.target.value)">
                     <option value="new">Новое</option>
                     <option value="in_progress">В работе</option>
@@ -109,6 +149,32 @@ const formatDate = (d) => new Date(d).toLocaleString('ru-RU', {
             <Link v-for="l in feedbacks.links" :key="l.label" :href="l.url ?? '#'" preserve-scroll
                   :class="{ on: l.active, off: !l.url }" v-html="l.label" />
         </div>
+
+        <!-- Модалка ответа -->
+        <VModal
+            :show="!!replyModal"
+            :title="`Ответ для: ${replyModal?.name ?? ''}`"
+            @close="closeReply"
+        >
+            <div v-if="replyModal">
+                <p style="margin-top:0;color:var(--mut);font-size:13px">
+                    Письмо будет отправлено на <b style="color:var(--cyan)">{{ replyModal.contact }}</b>
+                </p>
+
+                <label class="lbl">Текст ответа</label>
+                <textarea
+                    v-model="replyMessage"
+                    class="inp"
+                    rows="8"
+                    placeholder="Здравствуйте! Спасибо за обращение…"
+                ></textarea>
+
+                <div style="display:flex;gap:10px;margin-top:16px">
+                    <VButton :busy="replyLoading" @click="sendReply">✉ Отправить письмо</VButton>
+                    <VButton variant="ghost" @click="closeReply">Отмена</VButton>
+                </div>
+            </div>
+        </VModal>
     </div>
 </template>
 

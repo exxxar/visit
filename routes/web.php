@@ -47,6 +47,9 @@ Route::middleware(['auth', 'verified', 'admin.access'])
                 Route::post('import/mypwa', 'importMypwa')->name('import.mypwa');
             });
 
+
+
+
         Route::resource('places', Admin\PlaceController::class)
             ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
@@ -64,6 +67,8 @@ Route::middleware(['auth', 'verified', 'admin.access'])
 
         Route::resource('feedback', Admin\FeedbackController::class)
             ->only(['index', 'update', 'destroy']);
+        Route::post('feedback/{feedback}/reply', [Admin\FeedbackController::class, 'reply'])
+            ->name('feedback.reply');
 
         Route::resource('users', Admin\UserController::class)
             ->only(['index', 'store', 'update', 'destroy']);
@@ -85,6 +90,7 @@ Route::middleware(['auth', 'verified', 'role:business|admin'])
     ->prefix('account')->name('account.')->group(function () {
 
         Route::get('/', Account\DashboardController::class)->name('dashboard');
+
 
         Route::get('/place/{place:slug}', [Account\PlaceController::class, 'show'])->name('place.show');
         Route::get('places/{place:slug}/edit',    [Account\PlaceController::class, 'edit'])->name('places.edit');

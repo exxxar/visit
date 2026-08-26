@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Feedback;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class FeedbackController extends Controller
@@ -50,5 +51,39 @@ class FeedbackController extends Controller
     {
         $feedback->delete();
         return back()->with('success', 'Обращение удалено');
+    }
+
+
+    public function reply(Request $request, Feedback $feedback)
+    {
+        $request->validate([
+            'message' => ['required', 'string', 'max:5000'],
+        ], [
+            'message.required' => 'Напишите текст ответа',
+        ]);
+
+        // защита: отправить можно только на валидный email
+        if (!filter_var($feedback->contact, FILTER_VALIDATE_EMAIL)) {
+            return back()->with('error', 'Контакт не является email — письмо отправить нельзя');
+        }
+
+        try {
+            Mail::to($feedback->contact)->send(
+                new \App\Mail\FeedbackReplyMail($feedback, $request->input('message'))
+            );
+
+            // автоматически переводим в работу, если было новое
+            if ($feedback->status === Feedback::STATUS_NEW) {
+                $feedback->update(['status' => Feedback::STATUS_PROGRESS]);
+            }
+
+            return back()->with('success', "Ответ отправлен на {$feedback->contact}");
+        } catch (\Throwable $e) {
+            \Log::error('[FEEDBACK] Ошибка отправки ответа', [
+                'feedback_id' => $feedback->id,
+                'error'       => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Не удалось отправить письмо: ' . $e->getMessage());
+        }
     }
 }
