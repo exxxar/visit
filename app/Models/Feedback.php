@@ -18,7 +18,7 @@ class Feedback extends Model
     public const STATUS_RESOLVED   = 'resolved';
 
     public const SUBJECTS = [
-        'general'      => 'Общее pytanie',
+        'general'      => 'Общее',
         'partnership'  => 'Сотрудничество',
         'ads'          => 'Реклама',
         'bug'          => 'Ошибка на сайте',
