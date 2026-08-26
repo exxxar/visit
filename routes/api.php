@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DistrictController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\PlaceController;
 use App\Http\Controllers\Api\PlaceMenuController;
@@ -15,6 +16,9 @@ use App\Http\Controllers\Api\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+
+    Route::post('feedback', [FeedbackController::class, 'store'])
+        ->middleware('throttle:5,1'); // 5 запросов в минуту с IP
 
     // справочники
     Route::get('districts', [DistrictController::class, 'index']);

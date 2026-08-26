@@ -30,6 +30,7 @@
 @include('landing.mnav')
 @include('landing.modals')        {{-- addModal, leadModal, viewer, toast --}}
 @include('landing.stories')
+@include('landing.feedback')
 
 
 <script>window.LANDING = @js($payload)</script>

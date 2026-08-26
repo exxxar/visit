@@ -19,7 +19,9 @@ class HandleInertiaRequests extends Middleware
                 'roles'       => $request->user()->getRoleNames()->values()->toArray(),
                 'permissions' => $request->user()->getAllPermissions()->pluck('name')->values()->toArray(),
             ] : null,
-
+            'feedbackNewCount' => fn () => auth()->check() && auth()->user()->hasRole('admin')
+                ? \App\Models\Feedback::new()->count()
+                : 0,
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error'   => $request->session()->get('error'),

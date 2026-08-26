@@ -62,6 +62,9 @@ Route::middleware(['auth', 'verified', 'admin.access'])
         Route::post('stories/{story}/act', [Admin\StoryController::class, 'act'])->name('stories.act');
         Route::delete('stories/{story}', [Admin\StoryController::class, 'destroy'])->name('stories.destroy');
 
+        Route::resource('feedback', Admin\FeedbackController::class)
+            ->only(['index', 'update', 'destroy']);
+
         Route::resource('users', Admin\UserController::class)
             ->only(['index', 'store', 'update', 'destroy']);
         Route::get('roles', [Admin\RoleController::class, 'index'])->name('roles.index');

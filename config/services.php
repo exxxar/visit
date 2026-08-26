@@ -40,4 +40,12 @@ return [
         'token'   => env('MYPWA_API_TOKEN'),
         'timeout' => env('MYPWA_API_TIMEOUT', 30),
     ],
+    'mail' => [
+        'admin' => env('MAIL_ADMIN'),
+    ],
+
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id'   => env('TELEGRAM_CHAT_ID'),
+    ],
 ];

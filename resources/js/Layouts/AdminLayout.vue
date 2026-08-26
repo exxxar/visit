@@ -27,6 +27,7 @@ const nav = computed(() => [
     { href: '/admin/users',      icon: '👥', label: 'Пользователи', show: auth.can('manage users') },
     { href: '/admin/roles',      icon: '🔐', label: 'Роли',      show: auth.can('assign roles') },
     { href: '/admin/settings',   icon: '⚙️', label: 'Настройки', show: auth.can('manage settings') },
+    { href: '/admin/feedback',   icon: '✉', label: 'Обратная связь', show: auth.can('manage settings') },
 ].filter((i) => i.show))
 
 const isExact = (i) => i.exact ? page.url === i.href : page.url.startsWith(i.href)

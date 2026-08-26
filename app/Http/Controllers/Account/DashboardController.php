@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Account;
 
 use App\Enums\ModerationStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Feedback;
 use App\Models\News;
 use App\Models\PlaceStat;
 use Illuminate\Http\Request;
@@ -29,6 +30,22 @@ class DashboardController extends Controller
             'newsCount'    => News::whereIn('place_id', $ids)->count(),
             'onModeration' => $places->where('status', ModerationStatus::OnModeration)->count()
                 + News::whereIn('place_id', $ids)->where('status', ModerationStatus::OnModeration)->count(),
+            'feedback' => [
+                'new'         => Feedback::where('status', Feedback::STATUS_NEW)->count(),
+                'in_progress' => Feedback::where('status', Feedback::STATUS_PROGRESS)->count(),
+                'resolved'    => Feedback::where('status', Feedback::STATUS_RESOLVED)->count(),
+                'week'        => Feedback::where('created_at', '>=', now()->subDays(7))->count(),
+                'recent'      => Feedback::latest()
+                    ->limit(3)
+                    ->get(['id', 'name', 'subject', 'status', 'created_at'])
+                    ->map(fn ($f) => [
+                        'id'         => $f->id,
+                        'name'       => $f->name,
+                        'subject'    => $f->subject,
+                        'subjectLabel' => $f->subjectLabel(),
+                        'created_at' => $f->created_at->toISOString(),
+                    ]),
+            ],
         ]);
     }
 }
