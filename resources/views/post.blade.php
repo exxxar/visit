@@ -59,7 +59,7 @@
             {{ $post->published_at?->translatedFormat('d F Y') }}
         </p>
         @if($post->cover)
-            <img class="post-cover" src="/{{ $post->cover }}" alt="{{ $post->title }}">
+            <img class="post-cover" src="{{ safe_img($post->cover) }}" alt="{{ $post->title }}">
         @endif
     </article>
 
@@ -80,7 +80,7 @@
                 @foreach($post->places as $p)
                     <a class="p-card" href="/place/{{ $p->slug }}">
                         <div class="p-img">
-                            <img src="/{{ $p->cover_url }}" alt="{{ $p->name }}">
+                            <img src="{{ safe_img($p->cover_url) }}" alt="{{ $p->name }}">
                             <span class="p-rate">★ {{ number_format($p->rating, 1, '.', '') }}</span>
                         </div>
                         <div class="p-body">
@@ -99,7 +99,7 @@
             <div class="rail" style="margin-top:16px">
                 @foreach($related as $r)
                     <a class="p-card" href="/post/{{ $r->slug }}">
-                        <div class="p-img"><img src="/{{ $r->cover }}" alt=""></div>
+                        <div class="p-img"><img src="{{ safe_img($r->cover) }}" alt=""></div>
                         <div class="p-body">
                             <h3>{{ $r->title }}</h3>
                             <p class="p-meta">{{ $r->tag ?? 'Подборка' }}</p>

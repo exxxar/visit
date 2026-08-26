@@ -4922,3 +4922,12 @@ textarea.fb-input {
     .fb-actions .btn,
     .fb-submit { width: 100%; }
 }
+
+img{
+    background:var(--panel);  /* пока грузится/битая — панель вместо белой дыры */
+}
+.img-fallback{
+    object-fit:contain;
+    padding:20%;
+    opacity:.6;
+}

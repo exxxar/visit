@@ -73,7 +73,7 @@
     </nav>
 
     @if($event->image)
-        <img class="ev-cover" src="/{{ $event->image }}" alt="{{ $event->title }}">
+        <img class="ev-cover" src="{{ safe_img($event->image) }}" alt="{{ $event->title }}">
     @endif
 
     <div class="ev-main">
@@ -125,7 +125,7 @@
                 @foreach($related as $r)
                     <a class="p-card" href="/event/{{ $r->slug }}">
                         <div class="p-img">
-                            <img src="/{{ $r->image }}" alt="{{ $r->title }}">
+                            <img src="{{ safe_img($r->image) }}" alt="{{ $r->title }}">
                             <span class="p-rate">{{ $r->type->icon() }}</span>
                         </div>
                         <div class="p-body">

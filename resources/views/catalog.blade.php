@@ -128,7 +128,7 @@
                         @endphp
                         <article class="cat-card {{ $p->is_featured ? 'cat-card--featured' : '' }}">
                             <a class="cat-card__media" href="/place/{{ $p->slug }}">
-                                <img src="/{{ $p->cover_url }}" alt="{{ $p->name }}" loading="lazy">
+                                <img src="{{ safe_img($p->cover_url) }}" alt="{{ $p->name }}" loading="lazy">
                                 @if($p->is_featured)
                                     <span class="cat-card__badge">★ Спецразмещение</span>
                                 @endif

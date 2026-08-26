@@ -11,7 +11,7 @@
             @forelse($popular as $p)
                 <article class="p-card">
                     <div class="p-img">
-                        <img src="{{ $p->cover_url }}" alt="{{ $p->name }}">
+                        <img src="{{ safe_img($p->cover_url) }}" alt="{{ $p->name }}">
                         <span class="p-rate">★ {{ number_format($p->rating, 1, '.', '') }}</span>
                     </div>
                     <div class="p-body">

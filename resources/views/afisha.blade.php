@@ -72,7 +72,7 @@
                             <a class="af-card" href="/event/{{ $e->slug }}">
                                 @if($e->image)
                                     <div class="af-card__media">
-                                        <img src="{{ $e->image }}" alt="{{ $e->title }}" loading="lazy">
+                                        <img src="{{ safe_img($e->image) }}" alt="{{ $e->title }}" loading="lazy">
                                         <span class="af-card__type">{{ $e->type->icon() }}</span>
                                     </div>
                                 @endif
