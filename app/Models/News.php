@@ -21,4 +21,6 @@ class News extends Model
     ];
 
     public function place(): BelongsTo { return $this->belongsTo(Place::class); }
+
+
 }

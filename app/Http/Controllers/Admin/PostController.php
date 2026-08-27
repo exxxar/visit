@@ -21,46 +21,68 @@ class PostController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'title'  => ['required', 'string', 'max:160'],
-            'tag'    => ['nullable', 'string', 'max:50'],
-            'excerpt'=> ['nullable', 'string', 'max:300'],
-            'body'   => ['nullable', 'string'],
-            'cover'  => ['nullable', 'string'],
-            'status' => ['required', 'in:draft,published'],
-            'places' => ['nullable', 'array'],
+            'title'   => ['required', 'string', 'max:200'],
+            'tag'     => ['nullable', 'string', 'max:60'],
+            'excerpt' => ['nullable', 'string', 'max:500'],
+            'body'    => ['required', 'string'],
+            'cover'   => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'status'  => ['required', 'in:draft,published'],
+            'places'  => ['array'],
+            'places.*' => ['integer', 'exists:places,id'],
         ]);
+
+        $coverPath = null;
+        if ($request->hasFile('cover')) {
+            $coverPath = $request->file('cover')->store('posts', 'public');
+        }
 
         $post = Post::create([
-            ...$data,
-            'author_id' => $request->user()->id,
-            'slug'      => Str::slug($data['title']),
-            'status'    => PostStatus::from($data['status']),
-            'published_at' => $data['status'] === 'published' ? now() : null,
+            'title'   => $data['title'],
+            'tag'     => $data['tag'] ?? null,
+            'excerpt' => $data['excerpt'] ?? null,
+            'body'    => $data['body'],
+            'cover'   => $coverPath,
+            'status'  => $data['status'],
         ]);
 
-        $post->places()->sync($data['places'] ?? []);
+        if (!empty($data['places'])) {
+            $post->places()->sync($data['places']);
+        }
 
-        return back()->with('success', 'Подборка сохранена');
+        return back()->with('success', 'Подборка создана');
     }
 
     public function update(Request $request, Post $post)
     {
         $data = $request->validate([
-            'title'  => ['required', 'string', 'max:160'],
-            'tag'    => ['nullable', 'string', 'max:50'],
-            'excerpt'=> ['nullable', 'string', 'max:300'],
-            'body'   => ['nullable', 'string'],
-            'cover'  => ['nullable', 'string'],
-            'status' => ['required', 'in:draft,published'],
-            'places' => ['nullable', 'array'],
+            'title'   => ['required', 'string', 'max:200'],
+            'tag'     => ['nullable', 'string', 'max:60'],
+            'excerpt' => ['nullable', 'string', 'max:500'],
+            'body'    => ['required', 'string'],
+            'cover'   => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'status'  => ['required', 'in:draft,published'],
+            'places'  => ['array'],
+            'places.*' => ['integer', 'exists:places,id'],
         ]);
 
+        $coverPath = $post->cover;
+        if ($request->hasFile('cover')) {
+            // удаляем старую картинку, если была
+            if ($post->cover) {
+                Storage::disk('public')->delete($post->cover);
+            }
+            $coverPath = $request->file('cover')->store('posts', 'public');
+        }
+
         $post->update([
-            ...$data,
-            'status' => PostStatus::from($data['status']),
-            'published_at' => $post->published_at
-                    ?? ($data['status'] === 'published' ? now() : null),
+            'title'   => $data['title'],
+            'tag'     => $data['tag'] ?? null,
+            'excerpt' => $data['excerpt'] ?? null,
+            'body'    => $data['body'],
+            'cover'   => $coverPath,
+            'status'  => $data['status'],
         ]);
+
         $post->places()->sync($data['places'] ?? []);
 
         return back()->with('success', 'Подборка обновлена');

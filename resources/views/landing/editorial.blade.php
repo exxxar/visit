@@ -19,5 +19,17 @@
                 </a>
             @endforeach
         </div>
+
+        {{-- кнопка перехода к новостям --}}
+        <div class="ed-actions reveal">
+            <a href="{{ route('news.index') }}" class="ed-all-btn">
+                <span class="ed-all-btn__ico">📰</span>
+                <span class="ed-all-btn__txt">
+                    <b>Все новости города</b>
+                    <small>Открытия, события, обновления</small>
+                </span>
+                <span class="ed-all-btn__arrow">→</span>
+            </a>
+        </div>
     </div>
 </section>

@@ -2,7 +2,12 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Account;
+use App\Http\Controllers\Admin\EventController;
+use App\Http\Controllers\Admin\NewsController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AfishaController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\EventPageController;
 use App\Http\Controllers\PlacePageController;
@@ -13,6 +18,16 @@ use Illuminate\Support\Facades\Route;
 
 /* ---------- публичная часть ---------- */
 Route::get('/', App\Http\Controllers\LandingController::class)->name('landing');
+
+Route::get('/news', [App\Http\Controllers\NewsController::class, 'index'])->name('news.index');
+Route::get('/news/{news}', [App\Http\Controllers\NewsController::class, 'show'])->name('news.show');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'showForm'])->name('password.request');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendLink'])->name('password.email');
+    Route::get('/reset-password/{token}', [ResetPasswordController::class, 'showForm'])->name('password.reset');
+    Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name('password.store');
+});
 
 Route::get('/places', [CatalogController::class, 'index'])->name('catalog');
 Route::get('/place/{place:slug}', [PlacePageController::class, 'show'])->name('place.show');
@@ -49,6 +64,11 @@ Route::middleware(['auth', 'verified', 'admin.access'])
 
 
 
+        Route::resource('events', EventController::class)
+            ->except(['show']);
+
+        Route::resource('news', NewsController::class)
+            ->except(['show']);
 
         Route::resource('places', Admin\PlaceController::class)
             ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
@@ -70,8 +90,15 @@ Route::middleware(['auth', 'verified', 'admin.access'])
         Route::post('feedback/{feedback}/reply', [Admin\FeedbackController::class, 'reply'])
             ->name('feedback.reply');
 
-        Route::resource('users', Admin\UserController::class)
-            ->only(['index', 'store', 'update', 'destroy']);
+
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::post('users', [UserController::class, 'store'])->name('users.store');
+        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::put('users/{user}/password', [UserController::class, 'updatePassword'])->name('users.password');
+        Route::post('users/{user}/reset-link', [UserController::class, 'sendResetLink'])->name('users.reset-link');
+        Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+
         Route::get('roles', [Admin\RoleController::class, 'index'])->name('roles.index');
         Route::put('roles/{role}', [Admin\RoleController::class, 'update'])->name('roles.update');
 

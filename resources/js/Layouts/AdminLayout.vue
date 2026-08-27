@@ -20,6 +20,8 @@ const nav = computed(() => [
     { href: '/admin',            icon: '📊', label: 'Дашборд',   show: true, exact: true },
     { href: '/admin/moderation', icon: '🛡', label: 'Модерация', show: auth.hasAnyRole(['admin', 'moderator']) },
     { href: '/admin/places',     icon: '📍', label: 'Заведения', show: auth.isAdmin },
+    { href: '/admin/events',     icon: '🎭', label: 'Афиша', show: auth.isAdmin },
+    { href: '/admin/news',     icon: '📰', label: 'Новости', show: auth.isAdmin },
     { href: '/admin/stories',     icon: '🎞️', label: 'Истории', show: auth.isAdmin },
     { href: '/admin/posts',      icon: '📖', label: 'Журнал',    show: auth.hasAnyRole(['admin', 'editor']) },
     { href: '/admin/placements', icon: '✨', label: 'Реклама',   show: auth.can('manage ads') },
