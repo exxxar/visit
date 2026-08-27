@@ -338,29 +338,35 @@
             const price = typeof it.price === 'number'
                 ? new Intl.NumberFormat('ru-RU').format(it.price) + ' ₽'
                 : '—';
+
             const desc = (it.description || '')
                 .replace(/Цена:\s*\d+\s*(?:руб(?:лей)?|₽)\.?/gi, '')
                 .replace(/Вес:\s*\d+\s*(?:грамм|г|гр|мл|ml)[^.]*/gi, '')
                 .replace(/#[a-zA-Zа-яА-ЯёЁ]+/g, '')
                 .trim();
 
+            // Используем твой /assets/placeholder.jpg как fallback
+            const fallback = '/assets/placeholder.jpg';
+
             return `
-            <article class="menu-item">
-                ${it.image ? `
-                    <div class="menu-item__img">
-                        <img src="${escapeAttr(safe_img(it.image))}" alt="${escapeAttr(it.name)}" loading="lazy"
-                             onerror="this.parentElement.classList.add('menu-item__img--placeholder');this.parentElement.innerHTML='🍽'">
-                    </div>
-                ` : `<div class="menu-item__img menu-item__img--placeholder">🍽</div>`}
-                <div class="menu-item__body">
-                    <h5 class="menu-item__name">${escape(it.name)}</h5>
-                    ${desc ? `<p class="menu-item__desc">${escape(desc)}</p>` : ''}
-                    <div class="menu-item__foot">
-                        <span class="menu-item__price">${price}</span>
-                        ${it.weight ? `<span class="menu-item__weight">${escape(it.weight)}</span>` : ''}
-                    </div>
-                </div>
-            </article>`;
+    <article class="menu-item">
+        <div class="menu-item__img">
+            <img
+                src="${escapeAttr(it.image || fallback)}"
+                alt="${escapeAttr(it.name)}"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='${fallback}';this.classList.add('img-fallback')"
+            >
+        </div>
+        <div class="menu-item__body">
+            <h5 class="menu-item__name">${escape(it.name)}</h5>
+            ${desc ? `<p class="menu-item__desc">${escape(desc)}</p>` : ''}
+            <div class="menu-item__foot">
+                <span class="menu-item__price">${price}</span>
+                ${it.weight ? `<span class="menu-item__weight">${escape(it.weight)}</span>` : ''}
+            </div>
+        </div>
+    </article>`;
         }
 
         function escape(s) {
