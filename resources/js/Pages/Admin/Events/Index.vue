@@ -64,7 +64,7 @@ const typeLabel = (t) => t?.label ?? t?.name ?? t
                 <tr v-for="e in events.data" :key="e.id">
                     <td>
                         <div style="display:flex;align-items:center;gap:10px">
-                            <img v-if="e.image" :src="`/storage/${e.image}`" style="width:48px;height:36px;object-fit:cover;border-radius:8px">
+                            <img v-if="e.image" v-lazy="`/storage/${e.image}`" style="width:48px;height:36px;object-fit:cover;border-radius:8px">
                             <b>{{ e.title }}</b>
                         </div>
                     </td>

@@ -96,7 +96,7 @@ const submit = () => {
             <div style="display:flex;flex-direction:column;gap:16px">
                 <div class="vcard">
                     <h3 style="margin-top:0">Афиша</h3>
-                    <img v-if="preview" :src="preview" style="width:100%;border-radius:12px;margin-bottom:10px;max-height:200px;object-fit:cover">
+                    <img v-if="preview" v-lazy="preview" style="width:100%;border-radius:12px;margin-bottom:10px;max-height:200px;object-fit:cover">
                     <input type="file" accept="image/*" class="inp" @change="onImage">
                     <p class="hint">JPG, PNG, WEBP до 5 МБ</p>
                 </div>

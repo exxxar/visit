@@ -100,7 +100,7 @@ const upload = async (e) => {
             <VCard>
                 <h3 style="margin-top:0">Фотографии</h3>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-                    <img v-for="ph in place.photos" :key="ph.id" :src="ph.path"
+                    <img v-for="ph in place.photos" :key="ph.id" v-lazy="ph.path"
                          style="width:88px;height:64px;object-fit:cover;border-radius:12px;border:1px solid var(--line)"
                          :style="{ outline: ph.is_cover ? '2px solid var(--cyan)' : 'none' }">
                 </div>

@@ -107,7 +107,7 @@ const submit = () => {
                     <input type="file" multiple accept="image/*" class="inp" @change="onPhotos">
                     <div v-if="previews.length" class="ph-preview">
                         <div v-for="(src, i) in previews" :key="i" class="ph-item">
-                            <img :src="src" alt="">
+                            <img v-lazy="src" alt="">
                             <span v-if="i === 0" class="ph-cover">обложка</span>
                         </div>
                     </div>

@@ -137,7 +137,7 @@ const coverSrc = (path) => {
 
             <!-- превью -->
             <div v-if="coverPreview || currentCover" class="cover-preview">
-                <img :src="coverPreview ?? coverSrc(currentCover)" alt="Обложка">
+                <img v-lazy="coverPreview ?? coverSrc(currentCover)" alt="Обложка">
                 <button type="button" class="cover-preview__remove" title="Убрать" @click="clearCover">✕</button>
             </div>
 

@@ -111,7 +111,7 @@ const closeDetails = () => { detailsModal.value = null }
         <div v-for="i in items.data" :key="i.id" class="vcard mrow">
             <!-- Превью (обложка) -->
             <div v-if="cover(i)" class="mrow__cover">
-                <img :src="cover(i)" :alt="title(i)">
+                <img v-lazy="cover(i)" :alt="title(i)">
             </div>
 
             <!-- Основная информация -->

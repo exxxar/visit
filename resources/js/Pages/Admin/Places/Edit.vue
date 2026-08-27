@@ -180,7 +180,7 @@ const save = () => {
                         'ph-item--deleted': isDeleted(ph.id),
                     }"
                 >
-                    <img :src="ph.path" :alt="ph.name ?? ''">
+                    <img v-lazy="ph.path" :alt="ph.name ?? ''">
 
                     <div class="ph-item__overlay">
                         <button
@@ -225,7 +225,7 @@ const save = () => {
             <!-- превью новых фото -->
             <div v-if="newPreviews.length" class="ph-grid" style="margin-top:12px">
                 <div v-for="(src, i) in newPreviews" :key="i" class="ph-item ph-item--new">
-                    <img :src="src" alt="">
+                    <img v-lazy="src" alt="">
                     <div class="ph-item__overlay">
                         <button type="button" class="ph-btn ph-btn--danger" title="Убрать из загрузки" @click="removeNewPhoto(i)">✕</button>
                     </div>

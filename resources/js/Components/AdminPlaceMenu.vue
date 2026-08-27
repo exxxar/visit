@@ -127,7 +127,7 @@ const cleanDesc = (d) => (d || '')
                                         >
                                             <div v-if="it.image" class="pm-item__img">
                                                 <img
-                                                    :src="it.image"
+                                                    v-lazy="it.image"
                                                     :alt="it.name"
                                                     loading="lazy"
                                                     @error="$event.target.parentElement.style.display='none'"

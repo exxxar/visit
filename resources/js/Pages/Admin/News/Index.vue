@@ -56,7 +56,7 @@ const fmtDate = (d) => new Date(d).toLocaleDateString('ru-RU', {
                 <tr v-for="n in news.data" :key="n.id">
                     <td>
                         <div style="display:flex;align-items:center;gap:10px">
-                            <img v-if="n.image" :src="`/storage/${n.image}`"
+                            <img v-if="n.image" v-lazy="`/storage/${n.image}`"
                                  style="width:48px;height:36px;object-fit:cover;border-radius:8px">
                             <b>{{ n.title }}</b>
                         </div>

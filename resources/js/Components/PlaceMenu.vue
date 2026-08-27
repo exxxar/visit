@@ -55,7 +55,7 @@ onMounted(loadMenu)
         <div v-else-if="menu.length" class="place-menu__grid">
             <div v-for="item in menu" :key="item.id" class="menu-item">
                 <div v-if="item.image" class="menu-item__img">
-                    <img :src="item.image" :alt="item.name" loading="lazy">
+                    <img v-lazy="item.image" :alt="item.name" loading="lazy">
                 </div>
                 <div class="menu-item__body">
                     <h4 class="menu-item__name">{{ item.name }}</h4>

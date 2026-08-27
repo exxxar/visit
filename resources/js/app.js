@@ -3,6 +3,7 @@ import { createInertiaApp } from '@inertiajs/vue3'
 import { createPinia } from 'pinia'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import AccountLayout from '@/Layouts/AccountLayout.vue'
+import { vLazy } from './directives/lazy'   // ← добавить
 
 createInertiaApp({
     title: (t) => `${t} — ВИЗИТ ДОНЕЦК`,
@@ -24,6 +25,7 @@ createInertiaApp({
         createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(createPinia())
+            .directive('lazy', vLazy)   // ← добавить
             .mount(el)
     },
 

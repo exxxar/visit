@@ -29,7 +29,7 @@ const destroy = s => confirm('Удалить историю?') && router.delete(
                 <thead><tr><th>Медиа</th><th>Заведение</th><th>Статус</th><th>Просмотры</th><th>Создана</th><th></th></tr></thead>
                 <tbody>
                 <tr v-for="s in stories.data" :key="s.id">
-                    <td><img :src="`/storage/${s.media_path}`" style="width:44px;height:60px;object-fit:cover;border-radius:8px"></td>
+                    <td><img v-lazy="`/storage/${s.media_path}`" style="width:44px;height:60px;object-fit:cover;border-radius:8px"></td>
                     <td>{{ s.place?.name }}</td>
                     <td><VBadge v-bind="badge(L.story ?? {}, s.status)" /></td>
                     <td>{{ s.views_count }}</td>
