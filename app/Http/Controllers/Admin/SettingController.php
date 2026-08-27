@@ -9,18 +9,14 @@ use Inertia\Inertia;
 
 class SettingController extends Controller
 {
-    private const KEYS = ['hero', 'counters', 'socials', 'contacts'];
-
     public function edit()
     {
         $settings = Setting::all()
             ->pluck('value', 'key')
             ->map(function ($v) {
-                // если значение уже массив (из-за каста/accessor) — возвращаем как есть
                 if (is_array($v)) {
                     return $v;
                 }
-                // если строка — декодируем
                 if (is_string($v)) {
                     return json_decode($v, true) ?? [];
                 }
@@ -28,7 +24,6 @@ class SettingController extends Controller
             })
             ->toArray();
 
-        // дефолтные значения
         $defaults = [
             'hero' => [
                 'title' => 'Гид по Донецку',
@@ -51,11 +46,11 @@ class SettingController extends Controller
                 'address' => '',
             ],
             'districts' => [
-                'kicker'      => '04 · Районы',
-                'title'       => 'Исследуйте город',
-                'title_grad'  => 'Выберите свой район',
-                'sub'         => 'Все интересные места рядом с вами.',
-                'defaults'    => [
+                'kicker'     => '04 · Районы',
+                'title'      => 'Исследуйте город',
+                'title_grad' => 'Выберите свой район',
+                'sub'        => 'Все интересные места рядом с вами.',
+                'defaults'   => [
                     'Куйбышевский'  => 97,
                     'Киевский'      => 126,
                     'Калининский'   => 184,
@@ -69,7 +64,6 @@ class SettingController extends Controller
             ],
         ];
 
-        // объединяем: реальные настройки + дефолты
         foreach ($defaults as $key => $section) {
             if (!isset($settings[$key]) || !is_array($settings[$key])) {
                 $settings[$key] = $section;
@@ -78,6 +72,7 @@ class SettingController extends Controller
             }
         }
 
+        // ПРОВЕРЬ: путь должен совпадать с именем файла (без .vue)
         return Inertia::render('Admin/Settings', ['settings' => $settings]);
     }
 
@@ -89,7 +84,7 @@ class SettingController extends Controller
             'socials'            => ['array'],
             'contacts'           => ['array'],
             'districts'          => ['array'],
-            'districts.defaults' => ['array'],   // ← добавили
+            'districts.defaults' => ['array'],
         ]);
 
         foreach ($data as $key => $value) {
@@ -112,14 +107,15 @@ class SettingController extends Controller
             ->pluck('cnt', 'name')
             ->toArray();
 
-        // гарантируем все 9 районов, даже если по ним 0 мест
         $defaults = [];
         foreach (['Куйбышевский','Киевский','Калининский','Кировский','Ворошиловский','Будённовский','Петровский','Ленинский','Пролетарский'] as $name) {
             $defaults[$name] = $counts[$name] ?? 0;
         }
 
-        // читаем текущие настройки и перезаписываем только defaults
         $current = Setting::get('districts', []);
+        if (!is_array($current)) {
+            $current = [];
+        }
         $current['defaults'] = $defaults;
 
         Setting::updateOrCreate(
