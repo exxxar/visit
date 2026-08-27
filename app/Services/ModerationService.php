@@ -21,7 +21,6 @@ class ModerationService
 {
     public function __construct(private readonly User $moderator) {}
 
-    /** type => [модель, permission] */
     public const TYPES = [
         'places'       => [Place::class,       'moderate places'],
         'news'         => [News::class,        'moderate news'],
@@ -33,7 +32,11 @@ class ModerationService
     public function resolve(string $type, int $id): Model
     {
         abort_unless(array_key_exists($type, self::TYPES), 404);
-        abort_unless($this->moderator->can(self::TYPES[$type][1]), 403);
+
+        // Проверяем права только если модератор НЕ админ
+        if (!$this->moderator->is_admin) {
+            abort_unless($this->moderator->can(self::TYPES[$type][1]), 403);
+        }
 
         return self::TYPES[$type][0]::findOrFail($id);
     }
@@ -46,6 +49,7 @@ class ModerationService
                 $entity instanceof Event  => $entity->moderate($action, $this->moderator, $comment),
             $entity instanceof Review => $this->review($entity, $action, $comment),
             $entity instanceof Application => $this->application($entity, $action, $comment),
+            default => throw new \InvalidArgumentException('Unknown entity type'),
         };
     }
 
