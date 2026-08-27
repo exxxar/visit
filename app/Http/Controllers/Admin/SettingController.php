@@ -13,7 +13,20 @@ class SettingController extends Controller
 
     public function edit()
     {
-        $settings = Setting::all()->pluck('value', 'key')->map(fn ($v) => json_decode($v, true))->toArray();
+        $settings = Setting::all()
+            ->pluck('value', 'key')
+            ->map(function ($v) {
+                // если значение уже массив (из-за каста/accessor) — возвращаем как есть
+                if (is_array($v)) {
+                    return $v;
+                }
+                // если строка — декодируем
+                if (is_string($v)) {
+                    return json_decode($v, true) ?? [];
+                }
+                return [];
+            })
+            ->toArray();
 
         // дефолтные значения
         $defaults = [
@@ -37,16 +50,26 @@ class SettingController extends Controller
                 'phone'   => '',
                 'address' => '',
             ],
-            // НОВАЯ СЕКЦИЯ
             'districts' => [
                 'kicker'      => '04 · Районы',
                 'title'       => 'Исследуйте город',
                 'title_grad'  => 'Выберите свой район',
                 'sub'         => 'Все интересные места рядом с вами.',
+                'defaults'    => [
+                    'Куйбышевский'  => 97,
+                    'Киевский'      => 126,
+                    'Калининский'   => 184,
+                    'Кировский'     => 112,
+                    'Ворошиловский' => 248,
+                    'Будённовский'  => 83,
+                    'Петровский'    => 64,
+                    'Ленинский'     => 145,
+                    'Пролетарский'  => 91,
+                ],
             ],
         ];
 
-        // объединяем: реальные настройки + дефолты (если поля нет)
+        // объединяем: реальные настройки + дефолты
         foreach ($defaults as $key => $section) {
             if (!isset($settings[$key]) || !is_array($settings[$key])) {
                 $settings[$key] = $section;
@@ -57,7 +80,6 @@ class SettingController extends Controller
 
         return Inertia::render('Admin/Settings', ['settings' => $settings]);
     }
-
 
     public function update(Request $request)
     {
