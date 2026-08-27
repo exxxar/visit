@@ -585,7 +585,6 @@ select option:checked{
     color:#fff;
 }
 
-/* ===== ленивые картинки ===== */
 .lazy-img{
     opacity:0;
     transform:scale(.98);
@@ -600,8 +599,8 @@ select option:checked{
     transform:scale(1);
     filter:none;
 }
+/* заглушка — обычная картинка, просто чуть приглушённая */
 .lazy-img--error{
-    object-fit:contain;
-    padding:18%;
-    opacity:.55;
+    object-fit:cover;
+    opacity:.7;
 }

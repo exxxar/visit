@@ -1,1 +1,0 @@
-import{_ as o}from"./_plugin-vue_export-helper-DlAUqK2U.js";import{o as r,c as s,J as c}from"./app-CdMDlkLf.js";const t={},a={class:"vcard"};function n(e,_){return r(),s("div",a,[c(e.$slots,"default")])}const l=o(t,[["render",n]]);export{l as V};

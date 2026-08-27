@@ -1,0 +1,1 @@
+import{o as e,c as t,t as r,j as l}from"./app-LRVr-tMb.js";const n={__name:"VBadge",props:{color:{type:String,default:"gray"},label:String},setup(a){return(o,s)=>(e(),t("span",{class:l(["vbadge",`vbadge--${a.color}`])},r(a.label),3))}};export{n as _};
