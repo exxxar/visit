@@ -70,6 +70,9 @@ Route::middleware(['auth', 'verified', 'admin.access'])
         Route::resource('news', NewsController::class)
             ->except(['show']);
 
+        Route::post('settings/recalculate-districts', [Admin\SettingController::class, 'recalculateDistricts'])
+            ->name('settings.recalculate-districts');
+
         Route::resource('places', Admin\PlaceController::class)
             ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 

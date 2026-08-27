@@ -14,6 +14,7 @@ class LandingController extends Controller
 {
     public function __invoke()
     {
+
         $places = Place::approved()->with(['category', 'district', 'photos'])->get();
 
         // payload для клиентской карты/районов/поиска
@@ -40,8 +41,27 @@ class LandingController extends Controller
 
         return view('landing', [
             'settings' => [
-                'hero'     => Setting::get('hero', []),
-                'counters' => Setting::get('counters', []),
+                'hero'      => Setting::get('hero', []),
+                'counters'  => Setting::get('counters', []),
+                'socials'   => Setting::get('socials', []),
+                'contacts'  => Setting::get('contacts', []),
+                'districts' => Setting::get('districts', [
+                    'kicker'      => '04 · Районы',
+                    'title'       => 'Исследуйте город',
+                    'title_grad'  => 'Выберите свой район',
+                    'sub'         => 'Все интересные места рядом с вами.',
+                    'defaults'    => [
+                        'Куйбышевский'  => 97,
+                        'Киевский'      => 126,
+                        'Калининский'   => 184,
+                        'Кировский'     => 112,
+                        'Ворошиловский' => 248,
+                        'Будённовский'  => 83,
+                        'Петровский'    => 64,
+                        'Ленинский'     => 145,
+                        'Пролетарский'  => 91,
+                    ],
+                ]),
             ],
             'popular'   => $places->sortByDesc('rating')->take(8)->values(),
             'newPlaces' => $places->sortByDesc('created_at')->take(4)->values(),
@@ -52,6 +72,7 @@ class LandingController extends Controller
                 ->orderByDesc('published_at')->take(7)->get(),
             'districts' => District::orderBy('sort')->get(),   // ← добавили
             'payload'   => $payload,
+
         ]);
     }
 }

@@ -1,10 +1,14 @@
 <section class="sec" id="districts">
     <div class="wrap">
         <div class="s-head reveal">
-            <div class="kicker">04 · Районы</div>
-            <h2>Исследуйте город<br><span class="grad">Выберите свой район</span></h2>
-            <p class="s-sub">Все интересные места рядом с вами.</p>
+            <div class="kicker">{{ $settings['districts']['kicker'] ?? '04 · Районы' }}</div>
+            <h2>
+                {{ $settings['districts']['title'] ?? 'Исследуйте город' }}<br>
+                <span class="grad">{{ $settings['districts']['title_grad'] ?? 'Выберите свой район' }}</span>
+            </h2>
+            <p class="s-sub">{{ $settings['districts']['sub'] ?? 'Все интересные места рядом с вами.' }}</p>
         </div>
+
 
         <div class="dist-map-wrap reveal" id="distMapWrap">
             <svg viewBox="0 0 640 420" fill="none" aria-hidden="true">
@@ -43,16 +47,23 @@
                     <circle class="pt3" cx="118" cy="300" r="2.5" fill="#a3e635"/>
                 </g>
 
+                @php
+                    $def = $settings['districts']['defaults'] ?? [];
+                    $placesCount = fn ($name) => $districts->firstWhere('name', $name)?->stats['places']
+                                                 ?? $def[$name]
+                                                 ?? 0;
+                @endphp
+
                 <g class="d-labels" pointer-events="none">
-                    <text class="d-lbl" x="148" y="100">КУЙБЫШЕВСКИЙ<tspan class="d-lbl-n" x="148" dy="14">{{ $districts->firstWhere('name','Куйбышевский')?->stats['places'] ?? 97 }} мест</tspan></text>
-                    <text class="d-lbl" x="288" y="88">КИЕВСКИЙ<tspan class="d-lbl-n" x="288" dy="14">{{ $districts->firstWhere('name','Киевский')?->stats['places'] ?? 126 }} мест</tspan></text>
-                    <text class="d-lbl" x="468" y="108">КАЛИНИНСКИЙ<tspan class="d-lbl-n" x="468" dy="14">{{ $districts->firstWhere('name','Калининский')?->stats['places'] ?? 184 }} места</tspan></text>
-                    <text class="d-lbl" x="108" y="208">КИРОВСКИЙ<tspan class="d-lbl-n" x="108" dy="14">{{ $districts->firstWhere('name','Кировский')?->stats['places'] ?? 112 }} мест</tspan></text>
-                    <text class="d-lbl" x="262" y="196">ВОРОШИЛОВСКИЙ<tspan class="d-lbl-n" x="262" dy="14">{{ $districts->firstWhere('name','Ворошиловский')?->stats['places'] ?? 248 }} мест</tspan></text>
-                    <text class="d-lbl" x="472" y="214">БУДЁННОВСКИЙ<tspan class="d-lbl-n" x="472" dy="14">{{ $districts->firstWhere('name','Будённовский')?->stats['places'] ?? 83 }} места</tspan></text>
-                    <text class="d-lbl" x="118" y="324">ПЕТРОВСКИЙ<tspan class="d-lbl-n" x="118" dy="14">{{ $districts->firstWhere('name','Петровский')?->stats['places'] ?? 64 }} места</tspan></text>
-                    <text class="d-lbl" x="278" y="304">ЛЕНИНСКИЙ<tspan class="d-lbl-n" x="278" dy="14">{{ $districts->firstWhere('name','Ленинский')?->stats['places'] ?? 145 }} мест</tspan></text>
-                    <text class="d-lbl" x="470" y="308">ПРОЛЕТАРСКИЙ<tspan class="d-lbl-n" x="470" dy="14">{{ $districts->firstWhere('name','Пролетарский')?->stats['places'] ?? 91 }} место</tspan></text>
+                    <text class="d-lbl" x="148" y="100">КУЙБЫШЕВСКИЙ<tspan class="d-lbl-n" x="148" dy="14">{{ $c = $placesCount('Куйбышевский') }} {{ $c }} {{ ruPlural($c, ['место','места','мест']) }}</tspan></text>
+                    <text class="d-lbl" x="288" y="88">КИЕВСКИЙ<tspan class="d-lbl-n" x="288" dy="14">{{ $c = $placesCount('Киевский') }} {{ $c }} {{ ruPlural($c, ['место','места','мест']) }}</tspan></text>
+                    <text class="d-lbl" x="468" y="108">КАЛИНИНСКИЙ<tspan class="d-lbl-n" x="468" dy="14">{{ $c = $placesCount('Калининский') }} {{ $c }} {{ ruPlural($c, ['место','места','мест']) }}</tspan></text>
+                    <text class="d-lbl" x="108" y="208">КИРОВСКИЙ<tspan class="d-lbl-n" x="108" dy="14">{{ $c = $placesCount('Кировский') }} {{ $c }} {{ ruPlural($c, ['место','места','мест']) }}</tspan></text>
+                    <text class="d-lbl" x="262" y="196">ВОРОШИЛОВСКИЙ<tspan class="d-lbl-n" x="262" dy="14">{{ $c = $placesCount('Ворошиловский') }} {{ $c }} {{ ruPlural($c, ['место','места','мест']) }}</tspan></text>
+                    <text class="d-lbl" x="472" y="214">БУДЁННОВСКИЙ<tspan class="d-lbl-n" x="472" dy="14">{{ $c = $placesCount('Будённовский') }} {{ $c }} {{ ruPlural($c, ['место','места','мест']) }}</tspan></text>
+                    <text class="d-lbl" x="118" y="324">ПЕТРОВСКИЙ<tspan class="d-lbl-n" x="118" dy="14">{{ $c = $placesCount('Петровский') }} {{ $c }} {{ ruPlural($c, ['место','места','мест']) }}</tspan></text>
+                    <text class="d-lbl" x="278" y="304">ЛЕНИНСКИЙ<tspan class="d-lbl-n" x="278" dy="14">{{ $c = $placesCount('Ленинский') }} {{ $c }} {{ ruPlural($c, ['место','места','мест']) }}</tspan></text>
+                    <text class="d-lbl" x="470" y="308">ПРОЛЕТАРСКИЙ<tspan class="d-lbl-n" x="470" dy="14">{{ $c = $placesCount('Пролетарский') }} {{ $c }} {{ ruPlural($c, ['место','места','мест']) }}</tspan></text>
                 </g>
             </svg>
             <div class="d-tip" id="dTip"></div>

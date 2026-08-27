@@ -13,25 +13,98 @@ class SettingController extends Controller
 
     public function edit()
     {
-        $settings = collect(self::KEYS)
-            ->mapWithKeys(fn ($k) => [$k => Setting::get($k, [])]);
+        $settings = Setting::all()->pluck('value', 'key')->map(fn ($v) => json_decode($v, true))->toArray();
 
-        return Inertia::render('Admin/Settings/Edit', ['settings' => $settings]);
+        // дефолтные значения
+        $defaults = [
+            'hero' => [
+                'title' => 'Гид по Донецку',
+                'sub'   => 'Городской путеводитель',
+                'add'   => '',
+            ],
+            'counters' => [
+                'places'     => '1200+',
+                'categories' => '48',
+                'pages'      => '380',
+            ],
+            'socials' => [
+                'telegram'  => '',
+                'vk'        => '',
+                'instagram' => '',
+            ],
+            'contacts' => [
+                'email'   => '',
+                'phone'   => '',
+                'address' => '',
+            ],
+            // НОВАЯ СЕКЦИЯ
+            'districts' => [
+                'kicker'      => '04 · Районы',
+                'title'       => 'Исследуйте город',
+                'title_grad'  => 'Выберите свой район',
+                'sub'         => 'Все интересные места рядом с вами.',
+            ],
+        ];
+
+        // объединяем: реальные настройки + дефолты (если поля нет)
+        foreach ($defaults as $key => $section) {
+            if (!isset($settings[$key]) || !is_array($settings[$key])) {
+                $settings[$key] = $section;
+            } else {
+                $settings[$key] = array_merge($section, $settings[$key]);
+            }
+        }
+
+        return Inertia::render('Admin/Settings', ['settings' => $settings]);
     }
+
 
     public function update(Request $request)
     {
         $data = $request->validate([
-            'hero'     => ['nullable', 'array'],
-            'counters' => ['nullable', 'array'],
-            'socials'  => ['nullable', 'array'],
-            'contacts' => ['nullable', 'array'],
+            'hero'               => ['array'],
+            'counters'           => ['array'],
+            'socials'            => ['array'],
+            'contacts'           => ['array'],
+            'districts'          => ['array'],
+            'districts.defaults' => ['array'],   // ← добавили
         ]);
 
         foreach ($data as $key => $value) {
-            Setting::set($key, $value);
+            Setting::updateOrCreate(
+                ['key' => $key],
+                ['value' => json_encode($value)]
+            );
         }
 
         return back()->with('success', 'Настройки сохранены');
+    }
+
+    public function recalculateDistricts()
+    {
+        $counts = \App\Models\Place::approved()
+            ->whereNotNull('district_id')
+            ->selectRaw('d.name, COUNT(*) as cnt')
+            ->join('districts as d', 'd.id', '=', 'places.district_id')
+            ->groupBy('d.name')
+            ->pluck('cnt', 'name')
+            ->toArray();
+
+        // гарантируем все 9 районов, даже если по ним 0 мест
+        $defaults = [];
+        foreach (['Куйбышевский','Киевский','Калининский','Кировский','Ворошиловский','Будённовский','Петровский','Ленинский','Пролетарский'] as $name) {
+            $defaults[$name] = $counts[$name] ?? 0;
+        }
+
+        // читаем текущие настройки и перезаписываем только defaults
+        $current = Setting::get('districts', []);
+        $current['defaults'] = $defaults;
+
+        Setting::updateOrCreate(
+            ['key' => 'districts'],
+            ['value' => json_encode($current)]
+        );
+
+        return back()->with('success', 'Дефолты пересчитаны: всего ' . array_sum($defaults) . ' мест');
     }
 }
