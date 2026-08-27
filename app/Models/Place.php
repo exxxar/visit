@@ -23,8 +23,8 @@ class Place extends Model
         'phone', 'email', 'site', 'socials', 'working_hours',
         'price_level', 'status', 'is_featured',
         'external_id', 'external_source',
+        'rating', 'reviews_count', 'views_count',  // ← добавлено
     ];
-
 
     protected $casts = [
         'status'        => ModerationStatus::class,
@@ -33,6 +33,9 @@ class Place extends Model
         'lat'           => 'decimal:7',
         'lng'           => 'decimal:7',
         'is_featured'   => 'boolean',
+        'rating'        => 'decimal:2',   // ← добавлено
+        'reviews_count' => 'integer',     // ← добавлено
+        'views_count'   => 'integer',     // ← добавлено
     ];
 
 

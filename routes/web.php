@@ -73,6 +73,11 @@ Route::middleware(['auth', 'verified', 'admin.access'])
         Route::resource('places', Admin\PlaceController::class)
             ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
+        Route::put('places/{place}/rating', [Admin\PlaceController::class, 'updateRating'])
+            ->name('places.rating');
+        Route::post('places/{place}/recalculate-rating', [Admin\PlaceController::class, 'recalculateRating'])
+            ->name('places.recalculate-rating');
+
         Route::post('places/{place}/photos', [Admin\PlaceController::class, 'addPhoto']);
 
         Route::post('places/{place}/featured', [Admin\PlaceController::class, 'toggleFeatured'])

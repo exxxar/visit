@@ -110,6 +110,28 @@ class PlaceController extends Controller
         return back()->with('success', $place->is_featured ? 'Спецразмещение включено' : 'Спецразмещение выключено');
     }
 
+    public function updateRating(Request $request, Place $place)
+    {
+        $data = $request->validate([
+            'rating'        => ['required', 'numeric', 'min:0', 'max:5'],
+            'reviews_count' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $place->update([
+            'rating'        => round((float) $data['rating'], 2),
+            'reviews_count' => (int) $data['reviews_count'],
+        ]);
+
+        return back()->with('success', "Рейтинг «{$place->name}» обновлён");
+    }
+
+    public function recalculateRating(Place $place)
+    {
+        $place->recalculateRating();
+
+        return back()->with('success', "Рейтинг пересчитан из одобренных отзывов: ★{$place->rating} ({$place->reviews_count} отзывов)");
+    }
+
     public function destroy(Place $place)
     {
         $place->delete();
