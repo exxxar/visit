@@ -73,7 +73,7 @@ class SettingController extends Controller
         }
 
         // ПРОВЕРЬ: путь должен совпадать с именем файла (без .vue)
-        return Inertia::render('Admin/Settings', ['settings' => $settings]);
+        return Inertia::render('Admin/Settings/Edit', ['settings' => $settings]);
     }
 
     public function update(Request $request)
