@@ -30,8 +30,8 @@
         <div class="hero-art reveal">
             <div class="art-glow"></div>
             <img id="heroImg" src="assets/hero-palm.jpg" alt="Пальма Мерцалова — символ Донецка в неоновом арт-стиле">
-            <div class="float-chip fc1">★ 4.9 · AURA SPA</div>
-            <div class="float-chip fc2">🍸 NEON BAR · открыто до 02:00</div>
+            <div class="float-chip fc1">★ 4.9 · ДонМак</div>
+            <div class="float-chip fc2">🍸 Fastoran · доставка c 10:00 до 18:30</div>
             <div class="float-chip fc3">📍 {{ $settings['counters']['places'] ?? '1 240' }} мест на карте</div>
         </div>
     </div>
