@@ -807,22 +807,94 @@ $('#openViewer').onclick = () => {
 
 /* ---------- геолокация ---------- */
 $('#geoBtn').onclick = function () {
-    this.textContent = 'Определяем…';
-    this.style.opacity = .7;
-    if (navigator.geolocation) {
-        try {
-            navigator.geolocation.getCurrentPosition(() => {
-            }, () => {
-            }, {timeout: 1200});
-        } catch (e) {
-        }
+    const btn = this;
+    btn.textContent = 'Определяем…';
+    btn.disabled = true;
+
+    if (!navigator.geolocation) {
+        toast('Геолокация недоступна в вашем браузере');
+        btn.textContent = 'Определить местоположение';
+        btn.disabled = false;
+        return;
     }
-    setTimeout(() => {
-        this.hidden = true;
-        $('#nearGrid').hidden = false;
-        toast('📍 Вы в центре Донецка — вот что рядом');
-    }, 900);
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const userLat = pos.coords.latitude;
+            const userLng = pos.coords.longitude;
+
+            // рассчитываем расстояние до каждого заведения
+            const nearby = PLACES
+                .filter(p => p.lat && p.lng)
+                .map(p => ({
+                    ...p,
+                    distance: getDistance(userLat, userLng, p.lat, p.lng)
+                }))
+                .sort((a, b) => a.distance - b.distance)
+                .slice(0, 6);
+
+            renderNearby(nearby);
+            btn.hidden = true;
+            $('#nearGrid').hidden = false;
+            toast('📍 Показаны ближайшие заведения');
+        },
+        (err) => {
+            toast('Не удалось определить местоположение');
+            btn.textContent = 'Попробовать снова';
+            btn.disabled = false;
+        },
+        { timeout: 10000, maximumAge: 60000 }
+    );
 };
+
+/* расчет расстояния между двумя точками (Haversine) */
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // радиус Земли в метрах
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+/* форматирование расстояния */
+function formatDistance(meters) {
+    if (meters < 1000) {
+        return Math.round(meters) + ' м от вас';
+    }
+    return (meters / 1000).toFixed(1).replace('.', ',') + ' км от вас';
+}
+
+/* рендер карточек ближайших заведений */
+function renderNearby(places) {
+    const grid = $('#nearGrid');
+    grid.innerHTML = '';
+
+    if (!places.length) {
+        grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted)">Рядом нет заведений с указанными координатами</p>';
+        return;
+    }
+
+    places.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'nr-card';
+        card.innerHTML = `
+            <span class="nr-dist">${formatDistance(p.distance)}</span>
+            <h4>${escapeHtml(p.name)}</h4>
+            <p>${escapeHtml(p.label || CATS[p.cat]?.l || 'Заведение')} · ${escapeHtml(p.d || 'Донецк')}</p>
+            <a href="/place/${p.slug}" class="nr-link">Подробнее →</a>
+        `;
+        card.onclick = (e) => {
+            if (!e.target.closest('.nr-link')) {
+                openCard(p);
+                $('#map').scrollIntoView({ behavior: 'smooth' });
+            }
+        };
+        grid.appendChild(card);
+    });
+}
 
 /* ---------- подписка + POST ---------- */
 $('#subForm').addEventListener('submit', async e => {
