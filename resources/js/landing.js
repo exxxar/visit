@@ -1548,6 +1548,52 @@ function escapeAttr(str) { return escapeHtml(str); }
         });
     });
 
+    /* ==========================================================================
+   ЛОГИКА КАРТОЧЕК НАСТРОЕНИЯ (MOODS)
+   ========================================================================== */
+    $$('.m-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const mood = card.dataset.mood;
+            const msg = card.dataset.msg;
+
+            if (!mood) return;
+
+            // 1. Плавный скролл к секции с картой
+            const mapEl = $('#map');
+            if (mapEl) {
+                mapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            // 2. Обновляем логику фильтров карты (используем существующие переменные)
+            if (typeof activeLayerSlugs !== 'undefined' && typeof renderMapObjects === 'function') {
+                // Сбрасываем текущие фильтры
+                activeLayerSlugs.clear();
+                // Добавляем выбранное настроение (оно совпадает со slug слоя в админке)
+                activeLayerSlugs.add(mood);
+
+                // Обновляем визуальное состояние кнопок-фильтров над картой
+                const filterContainer = $('#mapFilters');
+                if (filterContainer) {
+                    filterContainer.querySelectorAll('.chip').forEach(btn => {
+                        if (btn.dataset.layer === 'all') {
+                            btn.classList.remove('on');
+                        }
+                        if (btn.dataset.layer === mood) {
+                            btn.classList.add('on');
+                        } else {
+                            btn.classList.remove('on');
+                        }
+                    });
+                }
+
+                // Перерисовываем маркеры на карте и схеме
+                renderMapObjects();
+            }
+
+            // 3. Показываем уведомление пользователю
+            toast(msg || `Показываем категорию: ${mood}`);
+        });
+    });
 
 })();
 
