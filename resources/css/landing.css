@@ -7919,3 +7919,103 @@ img{
         min-width: 100%;
     }
 }
+
+/* ---------- HERO (Обновленные пропорции) ---------- */
+.hero-grid {
+    display: grid;
+    /* Было: 1.05fr 0.95fr (текст занимал больше места) */
+    /* Стало: 0.9fr 1.1fr (арт-блок теперь шире и доминирует) */
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 48px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.hero-logo {
+    /* Было: clamp(44px, 7.2vw, 96px) - слишком огромно */
+    /* Стало: аккуратно уменьшенный, но все еще выразительный размер */
+    font-size: clamp(32px, 5vw, 64px);
+    font-weight: 900;
+    letter-spacing: .01em;
+    line-height: 1.05;
+    margin: 12px 0 16px; /* Уменьшили вертикальные отступы для компактности */
+}
+
+.hero-logo span {
+    display: block; /* "НОВОРОССИИ" остается на новой строке для красоты */
+}
+
+.hero-art {
+    position: relative;
+    /* ЗАДАЕМ ПРОПОРЦИИ: вертикальный формат (как постер), чтобы блок был высоким */
+    aspect-ratio: 4 / 5;
+    max-height: 700px; /* Увеличили максимальную высоту на больших экранах */
+    width: 100%;
+}
+
+.hero-art img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%; /* Заставляем картинку заполнить весь заданный блок */
+    object-fit: cover; /* Ключевое свойство: обрезает края, но НЕ сплющивает изображение */
+    border-radius: 32px;
+    border: 1px solid var(--line);
+    box-shadow: 0 40px 90px -30px rgba(0, 0, 0, .8), 0 0 60px -20px rgba(79, 125, 255, .35);
+    will-change: transform;
+}
+
+/* Немного подкорректируем позиционирование чипов, чтобы они красиво ложились на новый размер */
+.float-chip {
+    position: absolute;
+    z-index: 2;
+    padding: 11px 16px;
+    border-radius: 15px;
+    background: rgba(10, 14, 24, .75);
+    border: 1px solid rgba(255, 255, 255, .14);
+    backdrop-filter: blur(12px);
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 14px 34px -12px rgba(0, 0, 0, .7);
+    animation: floaty 6s ease-in-out infinite;
+    white-space: nowrap;
+}
+
+.fc1 { top: 8%; left: -4%; }
+.fc2 { top: 40%; right: -5%; animation-delay: 1.4s; }
+.fc3 { bottom: 10%; left: 6%; animation-delay: 2.6s; }
+
+/* ---------- АДАПТИВ ДЛЯ HERO ---------- */
+@media (max-width: 1080px) {
+    .hero-grid {
+        grid-template-columns: 1fr; /* На планшетах одна колонка */
+        gap: 40px;
+    }
+
+    .hero-art {
+        aspect-ratio: 16 / 10; /* На планшетах делаем более горизонтальным */
+        max-height: 450px;
+        order: -1; /* Картинка сверху, текст снизу */
+    }
+
+    .fc1 { left: 2%; }
+    .fc2 { right: 2%; }
+}
+
+@media (max-width: 620px) {
+    .hero-art {
+        aspect-ratio: 4 / 5; /* На мобильных снова вертикальный для лучшего вида */
+        max-height: 400px;
+    }
+
+    .hero-logo {
+        font-size: clamp(28px, 8vw, 42px); /* Еще компактнее на телефонах */
+        margin: 8px 0 12px;
+    }
+
+    .float-chip {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+}
