@@ -27,11 +27,11 @@ export default defineConfig({
         VitePWA({
             registerType: 'prompt',
             injectRegister: 'auto',
-            includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+            includeAssets: ['favicon.png', 'apple-touch-icon.png', 'masked-icon.svg'],
             manifest: {
                 id: '/', // ✅ ИСПРАВЛЕНИЕ 5: Явный ID приложения
-                name: 'ВИЗИТ ДОНЕЦК',
-                short_name: 'Визит ДНР',
+                name: 'КОД НОВОРОССИИ',
+                short_name: 'КОД НОВОРОССИИ',
                 description: 'Главный путеводитель по городу',
                 theme_color: '#05070d',
                 background_color: '#05070d',
@@ -67,7 +67,7 @@ export default defineConfig({
                     },
                     {
                         src: '/screenshots/desktop.png', // <-- ТЫ ДОЛЖЕН СОЗДАТЬ ЭТОТ ФАЙЛ
-                        sizes: '1280x720',               // <-- УКАЖИ РЕАЛЬНЫЕ РАЗМЕРЫ ЭТОЙ КАРТИНКИ
+                        sizes: '1920x1080',               // <-- УКАЖИ РЕАЛЬНЫЕ РАЗМЕРЫ ЭТОЙ КАРТИНКИ
                         type: 'image/png',
                         form_factor: 'wide'              // Для компьютеров
                     }
