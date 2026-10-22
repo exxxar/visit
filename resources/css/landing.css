@@ -7487,3 +7487,81 @@ img{
         font-size: 26px;
     }
 }
+
+/* ===== КНОПКА УСТАНОВКИ PWA ===== */
+#pwaInstallBtn {
+    display: none; /* Скрыта по умолчанию, показывается через JS */
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+    color: #fff;
+    font-family: var(--disp);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(34, 211, 238, .35), inset 0 1px 0 rgba(255, 255, 255, .2);
+    transition: transform .25s, box-shadow .25s, filter .25s;
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+#pwaInstallBtn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,.15), transparent 60%);
+    opacity: 0;
+    transition: opacity .3s;
+}
+
+#pwaInstallBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(139, 92, 246, .5), inset 0 1px 0 rgba(255, 255, 255, .3);
+    filter: brightness(1.08);
+}
+
+#pwaInstallBtn:hover::before {
+    opacity: 1;
+}
+
+#pwaInstallBtn:active {
+    transform: translateY(0);
+}
+
+/* Пульсирующее свечение для привлечения внимания */
+#pwaInstallBtn::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+    opacity: 0;
+    filter: blur(10px);
+    z-index: -1;
+    animation: pwaGlow 3s ease-in-out infinite;
+}
+
+@keyframes pwaGlow {
+    0%, 100% { opacity: 0; transform: scale(1); }
+    50% { opacity: .4; transform: scale(1.05); }
+}
+
+/* Иконка телефона */
+#pwaInstallBtn .pwa-ico {
+    font-size: 16px;
+    display: inline-flex;
+}
+
+/* Адаптив для мобильных */
+@media (max-width: 860px) {
+    #pwaInstallBtn {
+        padding: 8px 14px;
+        font-size: 12px;
+        border-radius: 12px;
+    }
+}

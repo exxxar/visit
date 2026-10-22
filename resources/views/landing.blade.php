@@ -85,9 +85,9 @@
 
 <script>window.LANDING = @js($payload)</script>
 
-<!-- Кнопка установки PWA (скрыта по умолчанию) -->
-<button id="pwaInstallBtn" class="btn btn-ghost btn-sm" style="display: none; margin-left: 10px;">
-    <span>📲</span> Установить приложение
+<button id="pwaInstallBtn" aria-label="Установить приложение">
+    <span class="pwa-ico">📲</span>
+    <span>Установить</span>
 </button>
 
 <!-- UI для обновления PWA (скрыт по умолчанию) -->
