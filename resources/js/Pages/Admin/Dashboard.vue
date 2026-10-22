@@ -49,6 +49,38 @@ const timeAgo = (iso) => {
             </VCard>
         </div>
 
+        <!-- СВОДКА РЕФЕРАЛОВ -->
+        <div class="grid grid--4" style="margin-top:16px">
+            <VCard class="ref-stat">
+                <div class="ref-stat__head">
+                    <span class="ref-stat__ico">🤝</span>
+                    <span class="ref-stat__week">+{{ counters.referrals_week ?? 0 }} за 7 дней</span>
+                </div>
+                <b class="stat" style="color:var(--lime)">{{ counters.referrals_total ?? 0 }}</b>
+                <span>рефералов всего</span>
+            </VCard>
+            <VCard class="ref-stat">
+                <b class="stat" style="color:var(--yellow)">{{ counters.referrals_pending ?? 0 }}</b>
+                <span>ожидают регистрации</span>
+            </VCard>
+            <VCard class="ref-stat">
+                <b class="stat" style="color:var(--violet)">{{ counters.referrals_clients ?? 0 }}</b>
+                <span>клиентов приведено</span>
+            </VCard>
+            <VCard class="ref-stat">
+                <b class="stat" style="color:var(--cyan)">{{ counters.referrals_partners ?? 0 }}</b>
+                <span>партнёров (тех + рекл.)</span>
+            </VCard>
+        </div>
+
+        <!-- КНОПКА В РЕФЕРАЛЫ -->
+        <Link href="/admin/referrals" class="ref-all-link" style="margin-top:16px;display:block">
+            <span>🤝</span>
+            <b>Реферальная система</b>
+            <small>Кто кого привёл, статусы приглашений, дерево рефералов</small>
+            <span class="ref-all-link__arrow">→</span>
+        </Link>
+
         <div class="grid grid--2" style="margin-top:16px">
             <VCard>
                 <h3 style="margin-top:0">Просмотры · 14 дней</h3>
@@ -66,6 +98,7 @@ const timeAgo = (iso) => {
                     <Link class="tab" href="/admin/moderation?tab=events">Афиша<span class="cnt">{{ queues.events }}</span></Link>
                     <Link class="tab" href="/admin/moderation?tab=reviews">Отзывы<span class="cnt">{{ queues.reviews }}</span></Link>
                     <Link class="tab" href="/admin/moderation?tab=applications">Заявки<span class="cnt">{{ queues.applications }}</span></Link>
+
                 </div>
 
                 <!-- ===== ОБРАТНАЯ СВЯЗЬ ===== -->

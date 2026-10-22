@@ -19,18 +19,12 @@ return new class extends Migration
             $t->timestamps();
         });
 
-        Schema::create('favorites', function (Blueprint $t) {
-            $t->id();
-            $t->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $t->foreignId('place_id')->constrained()->cascadeOnDelete();
-            $t->unique(['user_id', 'place_id']);
-            $t->timestamp('created_at');
-        });
+
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('favorites');
+
         Schema::dropIfExists('reviews');
     }
 };

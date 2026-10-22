@@ -3,41 +3,47 @@
         <div class="s-head reveal">
             <div class="kicker">05 · Интерактивная карта</div>
             <h2>Открой Донецк на карте</h2>
-            <p class="s-sub">Светящиеся точки — это места, которые уже любят горожане.</p>
+            <p class="s-sub">Светящиеся точки — это места и объекты, которые уже любят горожане.</p>
         </div>
 
-        {{-- переключатель режима --}}
+        {{-- Переключатель режима карты --}}
         <div class="map-mode reveal">
             <button class="chip on" id="modeScheme">🗺 Схема города</button>
             <button class="chip" id="modeReal">🌍 Реальная карта</button>
         </div>
 
-        <div class="map-tools reveal" id="mapFilters">
-            <button class="chip on" data-f="all">Все</button>
-            <button class="chip" data-f="food">Еда</button>
-            <button class="chip" data-f="coffee">Кофе</button>
-            <button class="chip" data-f="bars">Бары</button>
-            <button class="chip" data-f="beauty">Красота</button>
-            <button class="chip" data-f="sport">Спорт</button>
-            <button class="chip" data-f="auto">Авто</button>
-            <button class="chip" data-f="leisure">Отдых</button>
-            <button class="chip" data-f="med">Медицина</button>
-            <button class="chip" data-f="shop">Покупки</button>
-            <select id="districtSel" aria-label="Район">
-                <option value="all">Все районы</option>
-                @foreach ($districts as $d)
-                    <option>{{ $d->name }}</option>
-                @endforeach
-            </select>
+        {{-- Инструменты: динамические фильтры + поиск --}}
+        <div class="map-tools reveal">
+            <!-- Сюда JavaScript будет рендерить кнопки слоёв -->
+            <div id="mapFilters" style="display: contents;"></div>
+
+            <!-- Новый блок поиска по карте -->
+            <div class="map-search-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="mapSearchInput" placeholder="Название или категория..." autocomplete="off">
+                <button type="button" id="mapSearchClear" class="map-search-clear" hidden>✕</button>
+            </div>
         </div>
 
         <div class="map-view reveal" id="mapView">
-            {{-- схема --}}
+            {{-- Схематичная карта (SVG) --}}
             <div class="map-world" id="mapWorld">
                 <svg viewBox="0 0 1000 620" preserveAspectRatio="none" fill="none" aria-hidden="true">
                     <defs>
-                        <linearGradient id="sg" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#22d3ee"/><stop offset=".5" stop-color="#4f7dff"/><stop offset="1" stop-color="#f050e0"/></linearGradient>
-                        <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                        <linearGradient id="sg" x1="0" y1="0" x2="1" y2="0">
+                            <stop stop-color="#22d3ee"/>
+                            <stop offset=".5" stop-color="#4f7dff"/>
+                            <stop offset="1" stop-color="#f050e0"/>
+                        </linearGradient>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="4" result="b"/>
+                            <feMerge>
+                                <feMergeNode in="b"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
                     </defs>
                     <path d="M618 -10 C 600 120, 660 220, 636 330 C 616 430, 676 520, 656 630" stroke="#22d3ee" stroke-width="16" opacity=".12"/>
                     <path d="M618 -10 C 600 120, 660 220, 636 330 C 616 430, 676 520, 656 630" stroke="#22d3ee" stroke-width="2" opacity=".45"/>
@@ -57,9 +63,10 @@
                 </svg>
             </div>
 
-            {{-- реальная карта --}}
+            {{-- Реальная карта (MapLibre) --}}
             <div class="map-real" id="mapReal" hidden></div>
 
+            {{-- Всплывающая карточка места --}}
             <div class="map-card" id="mapCard" hidden>
                 <button class="mc-x" id="mcClose">✕</button>
                 <img id="mcImg" src="" alt="">
@@ -68,17 +75,12 @@
                     <h4 id="mcName"></h4>
                     <span class="mc-rate" id="mcRate"></span>
                     <p id="mcDesc"></p>
-                    <a href="#" class="mc-open">Открыть →</a>
+                    <a href="#" class="mc-open">Открыть страницу →</a>
                 </div>
-            </div>
-
-            <div class="map-legend">
-                <span><i style="background:var(--orange)"></i>Еда</span><span><i style="background:var(--lime)"></i>Кофе</span>
-                <span><i style="background:var(--magenta)"></i>Бары</span><span><i style="background:var(--violet)"></i>Красота</span>
-                <span><i style="background:var(--cyan)"></i>Спорт</span><span><i style="background:var(--blue)"></i>Авто</span>
             </div>
         </div>
     </div>
 </section>
 
+{{-- Передача ключа MapTiler в JS --}}
 <script>window.MAPTILER_KEY = @json(config('services.maptiler.key'));</script>

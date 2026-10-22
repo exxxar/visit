@@ -1,6 +1,6 @@
 <header class="hdr" id="hdr">
     <div class="wrap hdr-in">
-        <a class="logo" href="#top">ВИЗИТ<em>ДОНЕЦК</em></a>
+        <a class="logo" href="#top">КОД<em>НОВОРОССИИ</em></a>
         <nav class="nav-links">
 <!--            <a href="/places">Каталог</a>-->
             <a href="#places">Места</a><a href="#cat-food">Еда</a><a href="#cat-leisure">Отдых</a>

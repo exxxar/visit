@@ -8,7 +8,7 @@ const submit = () => form.post('/register')
 <template>
     <div class="auth">
         <div class="auth__card">
-            <a href="/" class="side__logo">ВИЗИТ<em>ДОНЕЦК</em></a>
+            <a href="/" class="side__logo">КОД<em>НОВОРОССИИ</em></a>
             <h1>Регистрация заведения</h1>
             <p class="auth__sub">Аккаунт владельца: карточка на сайте, новости и аналитика.</p>
 

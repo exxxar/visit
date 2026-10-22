@@ -6,7 +6,7 @@ import AccountLayout from '@/Layouts/AccountLayout.vue'
 import { vLazy } from './directives/lazy'   // ← добавить
 
 createInertiaApp({
-    title: (t) => `${t} — ВИЗИТ ДОНЕЦК`,
+    title: (t) => `${t} — КОД НОВОРОССИИ`,
 
     resolve: async (name) => {
         const pages = import.meta.glob('./Pages/**/*.vue')

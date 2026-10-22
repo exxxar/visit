@@ -23,7 +23,8 @@ class Place extends Model
         'phone', 'email', 'site', 'socials', 'working_hours',
         'price_level', 'status', 'is_featured',
         'external_id', 'external_source',
-        'rating', 'reviews_count', 'views_count',  // ← добавлено
+        'rating', 'reviews_count', 'views_count',
+        'referred_by',
     ];
 
     protected $casts = [
@@ -38,13 +39,18 @@ class Place extends Model
         'views_count'   => 'integer',     // ← добавлено
     ];
 
+    public function referredBy()
+    {
+        return $this->belongsTo(User::class, 'referred_by');
+    }
+
 
     /* ------- связи ------- */
     public function owner(): BelongsTo    { return $this->belongsTo(User::class, 'owner_id'); }
     public function category(): BelongsTo { return $this->belongsTo(Category::class); }
     public function district(): BelongsTo { return $this->belongsTo(District::class); }
     public function photos(): HasMany     { return $this->hasMany(PlacePhoto::class)->orderBy('sort'); }
-    public function reviews(): HasMany    { return $this->hasMany(Review::class); }
+
     public function news(): HasMany       { return $this->hasMany(News::class); }
     public function events(): HasMany     { return $this->hasMany(Event::class); }
     public function views(): HasMany      { return $this->hasMany(PlaceView::class); }
@@ -53,6 +59,16 @@ class Place extends Model
     public function posts(): BelongsToMany
     {
         return $this->belongsToMany(Post::class)->withPivot('sort')->orderBy('pivot_sort');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(PlaceReview::class);
+    }
+
+    public function approvedReviews(): HasMany
+    {
+        return $this->hasMany(PlaceReview::class)->where('status', 'approved');
     }
 
     /* ------- скоупы ------- */

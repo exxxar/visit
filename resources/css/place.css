@@ -1,0 +1,450 @@
+.reviews-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.review-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.review-author {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.review-author .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.review-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+    font-size: 14px;
+    color: var(--mut);
+}
+
+.stars {
+    color: var(--yellow);
+}
+
+.review-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.review-content p {
+    margin: 0 0 12px;
+    line-height: 1.6;
+}
+
+.review-photos {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.review-photo {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.review-photo:hover {
+    transform: scale(1.05);
+}
+
+.review-reply {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(34, 211, 238, 0.05);
+    border-left: 3px solid var(--cyan);
+    border-radius: 8px;
+}
+
+.reply-header {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.reply-badge {
+    padding: 2px 8px;
+    background: var(--cyan);
+    color: #000;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.reply-date {
+    color: var(--mut);
+    font-size: 12px;
+    margin-top: 8px;
+    display: block;
+}
+
+.review-form .form-group {
+    margin-bottom: 20px;
+}
+
+.star-rating {
+    display: flex;
+    gap: 8px;
+    font-size: 32px;
+}
+
+.star-rating .star {
+    cursor: pointer;
+    color: var(--line);
+    transition: color 0.2s, transform 0.2s;
+}
+
+.star-rating .star:hover,
+.star-rating .star.hover {
+    color: var(--yellow);
+    transform: scale(1.1);
+}
+
+.star-rating .star.active {
+    color: var(--yellow);
+}
+
+.reviews-pagination {
+    margin-top: 24px;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+}
+
+.page-info {
+    color: var(--mut);
+    font-size: 14px;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--cyan);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 13px;
+    transition: opacity 0.2s;
+}
+
+.btn-link:hover {
+    opacity: 0.8;
+}
+
+.btn-link.text-danger {
+    color: var(--rose);
+}
+
+.btn-link.text-muted {
+    color: var(--mut);
+}
+
+.no-reviews {
+    text-align: center;
+    color: var(--mut);
+    padding: 40px 20px;
+}
+
+/* ===== ЗВЁЗДНЫЙ РЕЙТИНГ ===== */
+.star-rating {
+    display: flex;
+    gap: 8px;
+    font-size: 36px;
+    margin-top: 8px;
+}
+
+.star-rating .star {
+    cursor: pointer;
+    color: var(--line);
+    transition: color 0.2s, transform 0.2s;
+    user-select: none;
+}
+
+.star-rating .star:hover,
+.star-rating .star.hover {
+    color: var(--yellow);
+    transform: scale(1.15);
+}
+
+.star-rating .star.active {
+    color: var(--yellow);
+    text-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
+}
+
+/* ===== КАРТОЧКА ОТЗЫВА ===== */
+.review-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+    transition: border-color 0.2s;
+}
+
+.review-card:hover {
+    border-color: rgba(34, 211, 238, 0.3);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    gap: 12px;
+}
+
+.review-author {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex: 1;
+}
+
+.review-author .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--line);
+    flex-shrink: 0;
+}
+
+.review-author-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.review-author-info strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.review-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 13px;
+    color: var(--mut);
+}
+
+.review-meta .stars {
+    color: var(--yellow);
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+.review-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.review-content {
+    margin-top: 12px;
+}
+
+.review-content p {
+    margin: 0 0 12px;
+    line-height: 1.6;
+    color: var(--txt);
+    white-space: pre-wrap;
+}
+
+.review-photos {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.review-photo {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid var(--line);
+}
+
+.review-photo:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    border-color: var(--cyan);
+}
+
+/* ===== ОТВЕТ ВЛАДЕЛЬЦА ===== */
+.review-reply {
+    margin-top: 18px;
+    padding: 16px 18px;
+    background: rgba(34, 211, 238, 0.06);
+    border-left: 3px solid var(--cyan);
+    border-radius: 10px;
+}
+
+.reply-header {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.reply-header strong {
+    font-size: 14px;
+}
+
+.reply-badge {
+    padding: 3px 10px;
+    background: var(--cyan);
+    color: #000;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.reply-date {
+    color: var(--mut);
+    font-size: 12px;
+    margin-top: 10px;
+    display: block;
+}
+
+.review-reply p {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--txt);
+}
+
+/* ===== КНОПКИ ДЕЙСТВИЙ ===== */
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--cyan);
+    cursor: pointer;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.btn-link:hover {
+    background: rgba(34, 211, 238, 0.1);
+}
+
+.btn-link.text-danger {
+    color: var(--rose);
+}
+
+.btn-link.text-danger:hover {
+    background: rgba(255, 92, 122, 0.1);
+}
+
+.btn-link.text-muted {
+    color: var(--mut);
+}
+
+.btn-link.text-muted:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--txt);
+}
+
+/* ===== ПАГИНАЦИЯ ===== */
+.reviews-pagination {
+    margin-top: 28px;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+}
+
+.page-info {
+    color: var(--mut);
+    font-size: 14px;
+}
+
+/* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
+.no-reviews {
+    text-align: center;
+    color: var(--mut);
+    padding: 50px 20px;
+    font-size: 15px;
+}
+
+/* ===== ЗАГОЛОВОК СЕКЦИИ ОТЗЫВОВ ===== */
+.reviews-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.reviews-header h2 {
+    margin: 0;
+}
+
+/* ===== АДАПТИВ ===== */
+@media (max-width: 640px) {
+    .review-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .review-actions {
+        justify-content: flex-start;
+        margin-top: 12px;
+    }
+
+    .review-photo {
+        width: 80px;
+        height: 80px;
+    }
+
+    .star-rating {
+        font-size: 32px;
+    }
+}

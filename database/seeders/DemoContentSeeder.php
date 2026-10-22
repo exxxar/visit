@@ -15,7 +15,7 @@ class DemoContentSeeder extends Seeder
 {
     public function run(): void
     {
-        $editor = User::where('email', 'editor@vizit-donetsk.ru')->first();
+        $editor = User::where('email', 'editor@code-novorossii.ru')->first();
         $opera  = Place::where('slug', 'del-mar')->first();
 
         Event::firstOrCreate(['slug' => 'simfonicheskaya-noch'], [

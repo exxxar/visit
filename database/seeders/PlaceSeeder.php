@@ -3,10 +3,10 @@
 namespace Database\Seeders;
 
 use App\Enums\ModerationStatus;
-use App\Enums\ReviewStatus;
 use App\Models\Category;
 use App\Models\District;
 use App\Models\Place;
+use App\Models\PlaceReview; // <-- Новая модель
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -15,6 +15,10 @@ class PlaceSeeder extends Seeder
     public function run(): void
     {
         $owner = User::where('email', 'owner@vizit-donetsk.ru')->first();
+
+        // Получаем ID тестового пользователя (туриста) для отзывов
+        $tourist = User::where('email', 'user@vizit-donetsk.ru')->first();
+        $touristId = $tourist ? $tourist->id : 1; // Фолбэк на ID 1, если пользователь еще не создан
 
         $places = [
             // slug, name, cat, district, address, lat, lng, price, img, rating, owner?
@@ -33,8 +37,8 @@ class PlaceSeeder extends Seeder
         foreach ($places as [$slug, $name, $cat, $district, $address, $lat, $lng, $price, $img, $rating, $hasOwner]) {
             $place = Place::firstOrCreate(['slug' => $slug], [
                 'name'              => $name,
-                'category_id'       => Category::where('slug', $cat)->first()->id,
-                'district_id'       => District::where('name', $district)->first()->id,
+                'category_id'       => Category::where('slug', $cat)->first()?->id, // Добавлен ?-> для безопасности
+                'district_id'       => District::where('name', $district)->first()?->id,
                 'owner_id'          => $hasOwner ? $owner?->id : null,
                 'address'           => $address,
                 'lat'               => $lat,
@@ -52,25 +56,41 @@ class PlaceSeeder extends Seeder
             $place->photos()->firstOrCreate(['is_cover' => true], ['path' => $img, 'sort' => 0]);
         }
 
-        /* отзывы для живой карточки */
+        /* Отзывы для живой карточки (обновлено под PlaceReview) */
         $gastro = Place::where('slug', 'gastro-bar')->first();
         if ($gastro && $gastro->reviews()->count() === 0) {
             $gastro->reviews()->createMany([
-                ['author_name' => 'Мария', 'rating' => 5, 'text' => 'Лучший ужин в городе, винная карта — огонь.', 'status' => ReviewStatus::Approved],
-                ['author_name' => 'Дмитрий', 'rating' => 4, 'text' => 'Отлично, но вечером лучше бронировать.', 'status' => ReviewStatus::Approved],
-                ['author_name' => 'Гость', 'rating' => 5, 'text' => 'Проверяю на модерацию.', 'status' => ReviewStatus::Pending],
+                [
+                    'user_id' => $touristId,
+                    'rating'  => 5,
+                    'content' => 'Лучший ужин в городе, винная карта — огонь.',
+                    'status'  => 'approved', // Используем строку, как в миграции
+                ],
+                [
+                    'user_id' => $touristId,
+                    'rating'  => 4,
+                    'content' => 'Отлично, но вечером лучше бронировать.',
+                    'status'  => 'approved',
+                ],
+                [
+                    'user_id' => $touristId,
+                    'rating'  => 5,
+                    'content' => 'Проверяю, как работает модерация новых отзывов.',
+                    'status'  => 'pending',
+                ],
             ]);
-            $gastro->recalculateRating();
+            // recalculateRating() больше не нужен! Модель PlaceReview делает это автоматически через booted().
         }
 
         $coffee = Place::where('slug', 'coffee-room')->first();
         if ($coffee && $coffee->reviews()->count() === 0) {
             $coffee->reviews()->create([
-                'author_name' => 'Алина', 'rating' => 5,
-                'text' => 'Латте-арт как из pinterest, завтраки до вечера.',
-                'status' => ReviewStatus::Approved,
+                'user_id' => $touristId,
+                'rating'  => 5,
+                'content' => 'Латте-арт как из pinterest, завтраки до вечера.',
+                'status'  => 'approved',
             ]);
-            $coffee->recalculateRating();
+            // recalculateRating() удален
         }
     }
 }

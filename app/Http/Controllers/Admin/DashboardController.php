@@ -12,6 +12,7 @@ use App\Models\Lead;
 use App\Models\News;
 use App\Models\Place;
 use App\Models\PlaceView;
+use App\Models\ReferralInvite;
 use App\Models\Review;
 use App\Models\Subscription;
 use Inertia\Inertia;
@@ -38,6 +39,14 @@ class DashboardController extends Controller
                 'places'       => Place::approved()->count(),
                 'leads_week'   => Lead::where('created_at', '>=', now()->subDays(7))->count(),
                 'subscribers'  => Subscription::where('status', 'active')->count(),
+
+                'referrals_total'    => ReferralInvite::count(),
+                'referrals_week'     => ReferralInvite::where('created_at', '>=', now()->subDays(7))->count(),
+                'referrals_pending'  => ReferralInvite::where('status', ReferralInvite::STATUS_PENDING)->count(),
+                'referrals_clients'  => ReferralInvite::where('role', ReferralInvite::ROLE_CLIENT)->count(),
+                'referrals_partners' => ReferralInvite::whereIn('role', [
+                    ReferralInvite::ROLE_TECH, ReferralInvite::ROLE_AD
+                ])->count(),
             ],
         ]);
     }

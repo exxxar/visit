@@ -12,6 +12,11 @@
                      onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
                 <span class="part-fallback">МИНЭКОНОМРАЗВИТИЯ ДНР</span>
             </span>
+            <span class="part-logo">
+                <img src="assets/logo-fsp.png" alt="ФСП ДНР"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+                <span class="part-fallback">ФСП ДНР</span>
+            </span>
         </div>
     </div>
 </section>

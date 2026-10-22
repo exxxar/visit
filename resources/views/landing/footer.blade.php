@@ -2,7 +2,7 @@
     <div class="wrap">
         <div class="f-grid">
             <div>
-                <a class="logo" href="#top">ВИЗИТ<em>ДОНЕЦК</em></a>
+                <a class="logo" href="#top">КОД<em>НОВОРОССИИ</em></a>
                 <p class="f-tag">Главный путеводитель по заведениям, услугам и отдыху города.</p>
                 <div class="f-soc">
                     <a href="{{ $settings['socials']['telegram'] ?? '#' }}" class="demo">Telegram</a>
@@ -38,8 +38,13 @@
                      onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
                 <span class="part-fallback">МИНЭКОНОМРАЗВИТИЯ ДНР</span>
             </span>
+            <span class="part-logo">
+                <img src="assets/logo-fsp.png" alt="ФСП ДНР"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+                <span class="part-fallback">ФСП ДНР</span>
+            </span>
         </div>
 
-        <div class="f-bottom"><span>© {{ now()->year }} ВИЗИТ ДОНЕЦК</span><span>Сделано с любовью к городу</span></div>
+        <div class="f-bottom"><span>© {{ now()->year }} КОД НОВОРОССИИ</span><span>Сделано с любовью к городу от студентов кафедры КТ ДонГУ</span></div>
     </div>
 </footer>

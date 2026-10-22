@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Http\Resources\EventResource;
 use App\Enums\EventType;
 use App\Enums\ModerationStatus;

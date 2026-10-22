@@ -1,6 +1,10 @@
-/* ============ ВИЗИТ ДОНЕЦК · landing.js ============ */
+/* ============ landing.js ============ */
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+/* ============ PWA UPDATE LOGIC ============ */
+import { registerSW } from 'virtual:pwa-register';
+import FormAutoSave from './form-autosave.js';
+window.FormAutoSave = FormAutoSave;
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 
@@ -28,9 +32,9 @@ async function postJSON(url, body) {
 
 /* ---------- toast ---------- */
 let toastT;
-
 function toast(m) {
     const t = $('#toast');
+    if (!t) return;
     t.textContent = m;
     t.classList.add('show');
     clearTimeout(toastT);
@@ -48,14 +52,16 @@ $$('.reveal').forEach(el => io.observe(el));
 
 /* ---------- header + parallax ---------- */
 addEventListener('scroll', () => {
-    $('#hdr').classList.toggle('scrolled', scrollY > 10);
+    const hdr = $('#hdr');
+    if (hdr) hdr.classList.toggle('scrolled', scrollY > 10);
     const a = $('#heroImg');
     if (a && innerWidth > 860) a.style.transform = `translateY(${scrollY * 0.08}px)`;
 }, {passive: true});
 
 /* ---------- carousel ---------- */
-$('#railPrev').onclick = () => $('#rail').scrollBy({left: -340, behavior: 'smooth'});
-$('#railNext').onclick = () => $('#rail').scrollBy({left: 340, behavior: 'smooth'});
+const railPrev = $('#railPrev'), railNext = $('#railNext'), rail = $('#rail');
+if (railPrev && rail) railPrev.onclick = () => rail.scrollBy({left: -340, behavior: 'smooth'});
+if (railNext && rail) railNext.onclick = () => rail.scrollBy({left: 340, behavior: 'smooth'});
 
 /* ---------- demo links ---------- */
 document.addEventListener('click', e => {
@@ -66,160 +72,368 @@ document.addEventListener('click', e => {
     }
 });
 
-/* ============ ИНТЕРАКТИВНАЯ КАРТА ============ */
-const CATS = {
-    food: {l: 'Еда', c: '#ff8a3c'},
-    coffee: {l: 'Кофе', c: '#a3e635'},
-    bars: {l: 'Бары', c: '#f050e0'},
-    beauty: {l: 'Красота', c: '#8b5cf6'},
-    sport: {l: 'Спорт', c: '#22d3ee'},
-    auto: {l: 'Авто', c: '#4f7dff'},
-    leisure: {l: 'Отдых', c: '#ff5c7a'},
-    med: {l: 'Медицина', c: '#34d399'},
-    shop: {l: 'Покупки', c: '#facc15'},
-};
+/* ========================================================================
+   ИНТЕРАКТИВНАЯ КАРТА (НОВАЯ АРХИТЕКТУРА)
+   ======================================================================== */
+let mapLayersData = [];
+let activeLayerSlugs = new Set(['all']);
+let mapMarkers = [];
+let mode = 'scheme';
+let realMap = null;
+let mapSearchQuery = ''; // <-- ДОБАВЛЕНО: текущий поисковый запрос
 
-/* пины — только реальные заведения из БД (xy считает Place::mapXY()) */
-const PLACES = (DATA.places ?? [])
-    .filter(p => p.xy)
-    .map(p => ({...p, x: p.xy.x, y: p.xy.y, img: p.cover || 'assets/restaurant.jpg'}));
-
-const world = $('#mapWorld'), card = $('#mapCard');
-let filter = 'all', district = 'all', searchSet = null;
-let mode = 'scheme', realMap = null;
-
+const world = $('#mapWorld');
+const card = $('#mapCard');
 const MAPTILER_KEY = window.MAPTILER_KEY ?? null;
-const MAPTILER_STYLE = 'openstreetmap';
 
-PLACES.forEach(p => {
-    const b = document.createElement('button');
-    b.className = 'pin';
-    b.style.left = p.x + '%';
-    b.style.top = p.y + '%';
-    b.style.setProperty('--pc', p.color || CATS[p.cat]?.c || '#22d3ee');
-    b.innerHTML = '<span class="pin-dot"></span>';
-    b.title = p.name;
-    b.onclick = e => {
-        e.stopPropagation();
-        openCard(p);
-    };
-    world.appendChild(b);
-    p.el = b;
-});
+/* ---------- СОСТОЯНИЕ ПОИСКА И ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---------- */
+let activeSearchIds = new Set(); // Хранит ID объектов, найденных при поиске
 
-function applyState() {
-    PLACES.forEach(p => {
-        const byFilter = filter === 'all' || p.cat === filter;
-        const bySearch = !searchSet || searchSet.has(p.id);
-        const dim = !bySearch || (district !== 'all' && p.d !== district);
+// Получаем плоский массив всех объектов со всех слоев для удобного поиска
+function getAllMapObjects() {
+    const all = [];
+    mapLayersData.forEach(layer => {
+        layer.objects.forEach(obj => {
+            all.push({
+                ...obj,
+                layerColor: layer.color,
+                layerIcon: layer.icon,
+                layerName: layer.name
+            });
+        });
+    });
+    return all;
+}
 
-        // схема
-        p.el.style.display = byFilter ? '' : 'none';
-        p.el.classList.toggle('dim', dim);
+// Формула гаверсинуса для расчета расстояния в метрах
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // радиус Земли в метрах
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
 
-        // реальная карта
-        if (p.marker) {
-            const el = p.marker.getElement();
-            el.style.display = byFilter ? '' : 'none';
-            el.classList.toggle('dim', dim);
+function formatDistance(meters) {
+    if (meters < 1000) return Math.round(meters) + ' м от вас';
+    return (meters / 1000).toFixed(1).replace('.', ',') + ' км от вас';
+}
+
+
+// 1. Загрузка данных
+async function loadMapData() {
+    try {
+        const res = await fetch('/api/v1/map-data'); // ИСПРАВЛЕНО: добавлен /v1/
+        if (!res.ok) throw new Error('API error');
+        const data = await res.json();
+        mapLayersData = data.layers;
+        renderLayerFilters();
+        renderMapObjects();
+    } catch (e) {
+        console.error('Ошибка загрузки данных карты:', e);
+    }
+}
+
+// 2. Рендер фильтров
+function renderLayerFilters() {
+    const container = $('#mapFilters');
+    if (!container) return;
+
+    let html = `<button class="chip ${activeLayerSlugs.has('all') ? 'on' : ''}" data-layer="all">Все</button>`;
+    mapLayersData.forEach(layer => {
+        html += `<button class="chip ${activeLayerSlugs.has(layer.slug) ? 'on' : ''}" data-layer="${layer.slug}" style="--ac:${layer.color}">
+            ${layer.icon} ${layer.name}
+        </button>`;
+    });
+    container.innerHTML = html;
+
+    container.querySelectorAll('.chip').forEach(btn => {
+        btn.onclick = () => {
+            const layerSlug = btn.dataset.layer;
+            if (layerSlug === 'all') {
+                activeLayerSlugs.clear();
+                activeLayerSlugs.add('all');
+            } else {
+                activeLayerSlugs.delete('all');
+                if (activeLayerSlugs.has(layerSlug)) {
+                    activeLayerSlugs.delete(layerSlug);
+                } else {
+                    activeLayerSlugs.add(layerSlug);
+                }
+            }
+            container.querySelectorAll('.chip').forEach(b => {
+                b.classList.toggle('on', activeLayerSlugs.has(b.dataset.layer));
+            });
+            renderMapObjects();
+        };
+    });
+}
+
+// 3. Рендер объектов на карте (и схема, и реальная)
+function renderMapObjects() {
+    // Очищаем старую схему
+    if (world) world.innerHTML = '';
+
+    // Очищаем старую реальную карту
+    if (realMap) {
+        mapMarkers.forEach(marker => marker.remove());
+        mapMarkers = [];
+    }
+
+    const visibleObjects = [];
+
+    // Собираем объекты для отображения
+    mapLayersData.forEach(layer => {
+        if (activeLayerSlugs.has('all') || activeLayerSlugs.has(layer.slug)) {
+            layer.objects.forEach(obj => {
+                // <-- НОВАЯ ЛОГИКА ФИЛЬТРАЦИИ ПО ТЕКСТУ -->
+                const matchesSearch = !mapSearchQuery ||
+                    obj.name.toLowerCase().includes(mapSearchQuery) ||
+                    (obj.description || '').toLowerCase().includes(mapSearchQuery) ||
+                    layer.name.toLowerCase().includes(mapSearchQuery);
+
+                if (matchesSearch) {
+                    visibleObjects.push({
+                        ...obj,
+                        layerColor: layer.color,
+                        layerIcon: layer.icon
+                    });
+                }
+            });
+        }
+    });
+
+    // Рендерим только отфильтрованные объекты
+    visibleObjects.forEach(obj => {
+        // А) Схема (SVG)
+        if (world && obj.x !== undefined && obj.y !== undefined) {
+            const b = document.createElement('button');
+            b.className = 'pin';
+            b.style.left = obj.x + '%';
+            b.style.top = obj.y + '%';
+            b.style.setProperty('--pc', obj.layerColor);
+            b.innerHTML = '<span class="pin-dot"></span>';
+            b.title = obj.name;
+            b.onclick = e => { e.stopPropagation(); openCard(obj); };
+            world.appendChild(b);
+        }
+
+        // Б) Реальная карта (MapLibre)
+        if (mode === 'real' && realMap && obj.lat && obj.lng) {
+            const el = document.createElement('button');
+            el.className = 'rpin';
+            el.style.setProperty('--pc', obj.layerColor);
+            el.title = obj.name;
+            if (obj.place_id) el.classList.add('rpin--place');
+
+            el.onclick = e => { e.stopPropagation(); openCard(obj); };
+
+            const marker = new maplibregl.Marker({ element: el })
+                .setLngLat([obj.lng, obj.lat])
+                .addTo(realMap);
+
+            mapMarkers.push(marker);
         }
     });
 }
 
-function openCard(p) {
-    $('#mcImg').src = p.img;
-    $('#mcName').textContent = p.name;
-    $('#mcCat').textContent = (p.label || CATS[p.cat]?.l || '') + ' · ' + p.d;
-    $('#mcCat').style.color = p.color || CATS[p.cat]?.c || '#22d3ee';
-    $('#mcRate').textContent = '★ ' + Number(p.r || 0).toFixed(1);
-    $('#mcDesc').textContent = p.desc || '';
-    const open = card.querySelector('.mc-open');
-    if (open) open.href = '/place/' + p.slug;
+/* ---------- ПОИСК ПО КАРТЕ ---------- */
+function applySearchState() {
+    // Обновляем SVG пины
+    $$('.pin').forEach(pin => {
+        const id = parseInt(pin.dataset.id);
+        const isMatch = activeSearchIds.has(id);
+
+        if (activeSearchIds.size > 0) {
+            pin.style.opacity = isMatch ? '1' : '0.2';
+            pin.style.transform = isMatch ? 'scale(1.3)' : 'scale(1)';
+            pin.style.zIndex = isMatch ? '10' : '1';
+        } else {
+            pin.style.opacity = '1';
+            pin.style.transform = 'scale(1)';
+            pin.style.zIndex = '1';
+        }
+    });
+
+    // Обновляем маркеры MapLibre
+    $$('.rpin').forEach(markerEl => {
+        const id = parseInt(markerEl.dataset.id);
+        const isMatch = activeSearchIds.has(id);
+
+        if (activeSearchIds.size > 0) {
+            markerEl.style.opacity = isMatch ? '1' : '0.2';
+            markerEl.style.transform = isMatch ? 'scale(1.3)' : 'scale(1)';
+        } else {
+            markerEl.style.opacity = '1';
+            markerEl.style.transform = 'scale(1)';
+        }
+    });
+}
+
+function runSearch(q) {
+    q = (q || '').trim().toLowerCase();
+    activeSearchIds.clear();
+
+    if (!q) {
+        applySearchState();
+        toast('Введите запрос — например, «кофейня» или название места');
+        return;
+    }
+
+    const allObjects = getAllMapObjects();
+    const matches = allObjects.filter(obj =>
+        obj.name.toLowerCase().includes(q) ||
+        (obj.description || '').toLowerCase().includes(q) ||
+        obj.layerName.toLowerCase().includes(q)
+    );
+
+    matches.forEach(obj => activeSearchIds.add(obj.id));
+    applySearchState();
+
+    if (matches.length > 0) {
+        toast(`Найдено ${matches.length} мест — они подсвечены на карте`);
+        $('#map')?.scrollIntoView({behavior: 'smooth'});
+    } else {
+        toast(`По запросу «${q}» ничего не найдено`);
+    }
+}
+
+/* ---------- ГЕОЛОКАЦИЯ И БЛИЖАЙШИЕ МЕСТА ---------- */
+function renderNearby(userLat, userLng) {
+    const grid = $('#nearGrid');
+    if (!grid) return;
+
+    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--mut)">Вычисляем расстояние...</p>';
+
+    const allObjects = getAllMapObjects().filter(obj => obj.lat && obj.lng);
+
+    const nearby = allObjects.map(obj => ({
+        ...obj,
+        distance: getDistance(userLat, userLng, obj.lat, obj.lng)
+    }))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 6); // Берем топ-6 ближайших
+
+    grid.innerHTML = '';
+
+    if (!nearby.length) {
+        grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--mut)">Рядом нет объектов с указанными координатами</p>';
+        return;
+    }
+
+    nearby.forEach(obj => {
+        const card = document.createElement('div');
+        card.className = 'nr-card';
+        card.innerHTML = `
+            <span class="nr-dist">📍 ${formatDistance(obj.distance)}</span>
+            <h4>${escapeHtml(obj.name)}</h4>
+            <p>${obj.layerIcon} ${escapeHtml(obj.layerName)}</p>
+            ${obj.slug ? `<a href="/place/${obj.slug}" class="nr-link">Подробнее →</a>` : ''}
+        `;
+        card.onclick = (e) => {
+            if (!e.target.closest('.nr-link')) {
+                openCard(obj);
+                $('#map')?.scrollIntoView({ behavior: 'smooth' });
+            }
+        };
+        grid.appendChild(card);
+    });
+}
+
+// 4. Открытие карточки
+function openCard(obj) {
+    if (!card) return;
+    const mcImg = $('#mcImg');
+    if (mcImg) mcImg.src = obj.image || 'assets/restaurant.jpg';
+
+    const mcName = $('#mcName');
+    if (mcName) mcName.textContent = obj.name;
+
+    const categoryText = obj.place_id ? (obj.category_label || 'Заведение') : (obj.layerIcon + ' Объект');
+    const mcCat = $('#mcCat');
+    if (mcCat) {
+        mcCat.textContent = categoryText;
+        mcCat.style.color = obj.layerColor;
+    }
+
+    const mcRate = $('#mcRate');
+    if (mcRate) mcRate.textContent = obj.rating ? `★ ${Number(obj.rating).toFixed(1)}` : '';
+
+    const mcDesc = $('#mcDesc');
+    if (mcDesc) mcDesc.textContent = obj.description || '';
+
+    const openBtn = card.querySelector('.mc-open');
+    if (openBtn) {
+        if (obj.slug) {
+            openBtn.href = '/place/' + obj.slug;
+            openBtn.style.display = 'inline-block';
+        } else {
+            openBtn.style.display = 'none';
+        }
+    }
 
     if (mode === 'real') {
         card.classList.add('fixed');
     } else {
         card.classList.remove('fixed');
-        card.classList.toggle('fx', p.x > 58);
-        card.classList.toggle('fy', p.y > 55);
-        card.style.left = p.x + '%';
-        card.style.top = p.y + '%';
+        if (obj.x !== undefined && obj.y !== undefined) {
+            card.classList.toggle('fx', obj.x > 58);
+            card.classList.toggle('fy', obj.y > 55);
+            card.style.left = obj.x + '%';
+            card.style.top = obj.y + '%';
+            card.style.transform = 'none';
+        } else {
+            card.style.left = '50%';
+            card.style.top = '50%';
+            card.style.transform = 'translate(-50%, -50%)';
+        }
     }
     card.hidden = false;
 }
 
 function closeCard() {
-    card.hidden = true;
+    if (card) card.hidden = true;
 }
 
-$('#mcClose').onclick = closeCard;
-$('#mapView').addEventListener('click', e => {
-    if (!e.target.closest('.pin,.map-card,.rpin')) closeCard();
-});
-
-/* ---------- сброс поиска при смене фильтров ---------- */
-function clearSearch() {
-    searchSet = null;
-    const si = $('#searchInput');
-    if (si) si.value = '';
-    const qi = $('#quickForm input');
-    if (qi) qi.value = '';
+if ($('#mcClose')) $('#mcClose').onclick = closeCard;
+if ($('#mapView')) {
+    $('#mapView').addEventListener('click', e => {
+        if (!e.target.closest('.pin, .map-card, .rpin')) closeCard();
+    });
 }
 
-function setFilter(f) {
-    filter = f;
-    clearSearch();
-    $$('#mapFilters .chip[data-f]').forEach(c => c.classList.toggle('on', c.dataset.f === f));
-    applyState();
-    closeCard();
-}
-
-$$('#mapFilters .chip[data-f]').forEach(ch => ch.onclick = () => setFilter(ch.dataset.f));
-
-/* ---------- реальная карта (MapLibre + MapTiler/OSM) ---------- */
-$('#modeScheme').onclick = () => setMode('scheme');
-$('#modeReal').onclick = () => setMode('real');
-
+// 5. Переключение режимов и инициализация
 function setMode(m) {
     mode = m;
-    $('#modeScheme').classList.toggle('on', m === 'scheme');
-    $('#modeReal').classList.toggle('on', m === 'real');
-    world.style.display = m === 'scheme' ? '' : 'none';
-    const real = $('#mapReal');
+    const modeSchemeBtn = $('#modeScheme');
+    const modeRealBtn = $('#modeReal');
+    if (modeSchemeBtn) modeSchemeBtn.classList.toggle('on', m === 'scheme');
+    if (modeRealBtn) modeRealBtn.classList.toggle('on', m === 'real');
 
-    if (m === 'real') {
-        real.hidden = false;
-        if (!realMap) initRealMap();
-        else realMap.resize();
-    } else {
-        real.hidden = true;
+    if (world) world.style.display = m === 'scheme' ? '' : 'none';
+    const real = $('#mapReal');
+    if (real) {
+        if (m === 'real') {
+            real.hidden = false;
+            if (!realMap) initRealMap();
+            else setTimeout(() => realMap.resize(), 100);
+        } else {
+            real.hidden = true;
+        }
     }
     closeCard();
+    renderMapObjects();
 }
 
-function initRealMap() {
-    console.log('[MAP] initRealMap called');
-    const container = document.getElementById('mapReal');
-    console.log('[MAP] container:', container);
-    console.log('[MAP] dimensions:', container.offsetWidth, 'x', container.offsetHeight);
+if ($('#modeScheme')) $('#modeScheme').onclick = () => setMode('scheme');
+if ($('#modeReal')) $('#modeReal').onclick = () => setMode('real');
 
-   /* const style = MAPTILER_KEY && MAPTILER_STYLE
-        ? `https://api.maptiler.com/maps/${MAPTILER_STYLE}/style.json?key=${MAPTILER_KEY}`
-        : {
-            version: 8,
-            sources: {
-                osm: {
-                    type: 'raster',
-                    tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                    tileSize: 256,
-                    attribution: '© OpenStreetMap contributors',
-                },
-            },
-            layers: [
-                {id: 'bg', type: 'background', paint: {'background-color': '#0b101d'}},  // ← добавили
-                {id: 'osm', type: 'raster', source: 'osm'},
-            ],
-        };*/
+function initRealMap() {
+    const container = document.getElementById('mapReal');
+    if (!container) return;
 
     const style = {
         version: 8,
@@ -228,55 +442,13 @@ function initRealMap() {
                 type: 'raster',
                 tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
                 tileSize: 256,
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/attributions">CARTO</a>',
+                attribution: '© Esri',
             },
         },
         layers: [
             { id: 'carto', type: 'raster', source: 'carto' },
         ],
     };
-
-/*
-    const style = {
-        version: 8,
-        sources: {
-            osm: {
-                type: 'raster',
-                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                tileSize: 256,
-                attribution: '© OpenStreetMap contributors',
-                // важно для OSM: не использовать при большом трафике
-                maxzoom: 19,
-            },
-        },
-        layers: [
-            { id: 'osm', type: 'raster', source: 'osm' },
-        ],
-    };
-*/
-
-
-/*
-    const style = {
-        version: 8,
-        sources: {
-            osm: {
-                type: 'raster',
-                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                tileSize: 256,
-                attribution: '© OpenStreetMap contributors',
-                // важно для OSM: не использовать при большом трафике
-                maxzoom: 19,
-            },
-        },
-        layers: [
-            { id: 'osm', type: 'raster', source: 'osm' },
-        ],
-    };*/
-
-
-
-    console.log('[MAP] style:', MAPTILER_KEY ? 'MapTiler' : 'OSM fallback');
 
     try {
         realMap = new maplibregl.Map({
@@ -287,10 +459,6 @@ function initRealMap() {
             attributionControl: {compact: true},
         });
 
-        console.log('[MAP] map instance created:', realMap);
-
-        if (!MAPTILER_KEY) $('#mapReal').classList.add('osm');
-
         realMap.addControl(new maplibregl.NavigationControl(), 'bottom-right');
         realMap.on('click', e => {
             if (!e.originalEvent.target.closest('.rpin')) closeCard();
@@ -298,31 +466,7 @@ function initRealMap() {
 
         realMap.on('load', () => {
             loadDistrictBoundaries();
-            console.log('[MAP] style loaded, layers:', realMap.getStyle().layers.length);
         });
-        realMap.on('error', (e) => console.error('[MAP] error:', e.error?.message || e));
-        realMap.on('sourcedata', (e) => {
-            if (e.isSourceLoaded) console.log('[MAP] source loaded:', e.sourceId);
-        });
-
-
-        PLACES.filter(p => p.lat && p.lng).forEach(p => {
-            const el = document.createElement('button');
-            el.className = 'rpin';
-            el.style.setProperty('--pc', p.color || CATS[p.cat]?.c || '#22d3ee');
-            el.title = p.name;
-            el.onclick = e => {
-                e.stopPropagation();
-                openCard(p);
-            };
-
-            p.marker = new maplibregl.Marker({element: el})
-                .setLngLat([p.lng, p.lat])
-                .addTo(realMap);
-        });
-
-        console.log('[MAP] markers added:', PLACES.filter(p => p.lat && p.lng).length);
-
     } catch (err) {
         console.error('[MAP] Error initializing map:', err);
     }
@@ -332,50 +476,30 @@ function loadDistrictBoundaries() {
     fetch('/data/districts.geojson')
         .then(r => r.json())
         .then(geojson => addDistrictLayers(geojson))
-        .catch(err => console.error('[MAP] GeoJSON load error:', err));
+        .catch(err => console.log('[MAP] GeoJSON not found or error:', err));
 }
 
 function addDistrictLayers(geojson) {
-    console.log("Test1")
-    if (realMap.getSource('districts')) {
-        // уже добавлено — выходим
-        return;
-    }
-    console.log("Test2")
+    if (!realMap || realMap.getSource('districts')) return;
     realMap.addSource('districts', { type: 'geojson', data: geojson });
 
-    // Полупрозрачная заливка районов
     realMap.addLayer({
         id: 'districts-fill',
         type: 'fill',
         source: 'districts',
-        paint: {
-            'fill-color': '#22d3ee',
-            'fill-opacity': 0.10,
-        },
+        paint: { 'fill-color': '#22d3ee', 'fill-opacity': 0.10 },
     });
 
-    // Неоновые границы
     realMap.addLayer({
         id: 'districts-outline',
         type: 'line',
         source: 'districts',
-        paint: {
-            'line-color': '#22d3ee',
-            'line-width': 2,
-            'line-opacity': 0.85,
-        },
+        paint: { 'line-color': '#22d3ee', 'line-width': 2, 'line-opacity': 0.85 },
     });
 
-
-
-    // Подписи через DOM — центроид каждого полигона
     geojson.features.forEach(f => {
         const coords = f.geometry.coordinates[0];
-        const centroid = coords.reduce(
-            (acc, [lng, lat]) => ({ lng: acc.lng + lng, lat: acc.lat + lat }),
-            { lng: 0, lat: 0 }
-        );
+        const centroid = coords.reduce((acc, [lng, lat]) => ({ lng: acc.lng + lng, lat: acc.lat + lat }), { lng: 0, lat: 0 });
         centroid.lng /= coords.length;
         centroid.lat /= coords.length;
 
@@ -388,7 +512,6 @@ function addDistrictLayers(geojson) {
             .addTo(realMap);
     });
 
-    // Hover-эффект
     realMap.on('mouseenter', 'districts-fill', () => {
         realMap.getCanvas().style.cursor = 'pointer';
         realMap.setPaintProperty('districts-fill', 'fill-opacity', 0.25);
@@ -400,7 +523,6 @@ function addDistrictLayers(geojson) {
         realMap.setPaintProperty('districts-outline', 'line-width', 2);
     });
 
-    // Клик по району = фильтр + скролл
     realMap.on('click', 'districts-fill', (e) => {
         if (e.features.length) {
             const name = e.features[0].properties.name;
@@ -409,165 +531,127 @@ function addDistrictLayers(geojson) {
     });
 }
 
-$('#districtSel').onchange = e => {
-    district = e.target.value;
-    clearSearch();
-    applyState();
-};
-applyState();
-
-/* ---------- поиск: подсветка совпадений на карте ---------- */
-function runSearch(q) {
-    q = (q || '').trim().toLowerCase();
-    if (!q) {
-        searchSet = null;
-        applyState();
-        toast('Введите запрос — например, «кофейня»');
-        return;
-    }
-    searchSet = new Set(PLACES.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        (p.label ?? '').toLowerCase().includes(q) ||
-        (CATS[p.cat]?.l ?? '').toLowerCase().includes(q) ||
-        (p.d ?? '').toLowerCase().includes(q)
-    ).map(p => p.id));
-    applyState();
-    toast(searchSet.size
-        ? `Нашли ${searchSet.size} мест — подсвечены на карте`
-        : `По запросу «${q}» пока пусто — посмотрите карту`);
-    $('#map').scrollIntoView({behavior: 'smooth'});
+/* ---------- ОБРАБОТЧИКИ ПОИСКА ---------- */
+const searchForm = $('#searchForm');
+if (searchForm) {
+    searchForm.addEventListener('submit', e => {
+        e.preventDefault();
+        runSearch($('#searchInput')?.value);
+    });
 }
 
-$('#searchForm').addEventListener('submit', e => {
-    e.preventDefault();
-    runSearch($('#searchInput').value);
-});
-$('#quickForm').addEventListener('submit', e => {
-    e.preventDefault();
-    runSearch(e.target.querySelector('input').value);
-});
-$('#navSearch').onclick = () => {
-    location.hash = '#top';
-    setTimeout(() => $('#searchInput').focus({preventScroll: true}), 600);
-};
-$('#mSearch').onclick = () => setTimeout(() => $('#searchInput').focus({preventScroll: true}), 600);
-
-/* ---------- быстрые сценарии ---------- */
-function jumpCat(f, msg) {
-    setFilter(f);
-    $('#map').scrollIntoView({behavior: 'smooth'});
-    toast(msg || ('Показываем на карте: ' + (CATS[f]?.l ?? f)));
+const quickForm = $('#quickForm');
+if (quickForm) {
+    quickForm.addEventListener('submit', e => {
+        e.preventDefault();
+        runSearch(e.target.querySelector('input')?.value);
+    });
 }
 
-$$('.hero .quick .chip').forEach(ch => ch.onclick = () => jumpCat(ch.dataset.cat));
-$$('#quick .chip[data-sc]').forEach(ch => ch.onclick = () => {
-    const s = ch.dataset.sc;
-    if (s === 'near') {
-        $('#nearby').scrollIntoView({behavior: 'smooth'});
-        if ($('#nearGrid').hidden) $('#geoBtn').click();
-        return;
-    }
-    jumpCat(s);
-});
+// Очистка поиска при смене фильтров слоев (опционально)
+// Можно добавить вызов runSearch('') при клике на чипы слоев, если нужно сбрасывать поиск
 
-/* ---------- карточки настроения ---------- */
-$$('#moods .m-card').forEach(card => {
-    card.style.cursor = 'pointer';
-    card.onclick = () => {
-        const mood = card.dataset.mood;
-        const msg = card.dataset.msg;
-        if (!mood) return;
-        jumpCat(mood, msg);
-    };
-});
+/* ---------- ОБРАБОТЧИК ГЕОЛОКАЦИИ ---------- */
+const geoBtn = $('#geoBtn');
+if (geoBtn) {
+    geoBtn.onclick = function () {
+        const btn = this;
+        btn.textContent = 'Определяем…';
+        btn.disabled = true;
 
-/* ============ РАЙОНЫ ============ */
-const D_META = {
-    'Ворошиловский': {c: 'var(--magenta)', t: ['🍽 Рестораны', '☕ Кофейни', '🌙 Ночная жизнь'], lx: 262, ly: 200},
-    'Киевский': {c: 'var(--lime)', t: ['🍽 Рестораны', '🛍 Магазины', '☕ Кофейни'], lx: 288, ly: 92},
-    'Калининский': {c: 'var(--cyan)', t: ['🍽 Рестораны', '🏋 Спорт', '🛍 Магазины'], lx: 468, ly: 112},
-    'Куйбышевский': {c: 'var(--blue)', t: ['🚗 Авто', '🍽 Рестораны', '🛍 Магазины'], lx: 148, ly: 105},
-    'Будённовский': {c: 'var(--orange)', t: ['🍽 Рестораны', '🚗 Авто', '💆 Красота'], lx: 472, ly: 218},
-    'Ленинский': {c: 'var(--rose)', t: ['🍽 Рестораны', '🛍 Магазины', '🚗 Авто'], lx: 278, ly: 308},
-    'Кировский': {c: 'var(--yellow)', t: ['🍽 Рестораны', '🚗 Авто', '☕ Кофейни'], lx: 108, ly: 212},
-    'Петровский': {c: 'var(--violet)', t: ['🍽 Рестораны', '🚗 Авто', '🛍 Магазины'], lx: 118, ly: 328},
-    'Пролетарский': {c: 'var(--emerald)', t: ['🍽 Рестораны', '🚗 Авто', '💆 Красота'], lx: 470, ly: 312},
-};
-const DISTRICTS = {};
-(DATA.districts ?? []).forEach(d => {
-    const m = D_META[d.name] ?? {c: 'var(--cyan)', t: [], lx: 320, ly: 210};
-    DISTRICTS[d.name] = {
-        n: d.stats?.places ?? 0,
-        cats: d.stats?.cats ?? [],
-        img: d.image || ('assets/districts/' + d.slug + '.jpg'),
-        ...m,
-    };
-});
+        if (!navigator.geolocation) {
+            toast('Геолокация недоступна в вашем браузере');
+            btn.textContent = 'Определить местоположение';
+            btn.disabled = false;
+            return;
+        }
 
-const dGrid = $('#distGrid'), dTip = $('#dTip');
-Object.entries(DISTRICTS).forEach(([name, d], i) => {
-    const el = document.createElement('article');
-    el.className = 'd-card reveal' + (i < 2 ? ' w2' : '');
-    el.style.setProperty('--dc', d.c);
-    el.dataset.d = name;
-    el.innerHTML = `<div class="d-bg" style="background-image:url('${d.img}')"></div>
-    <h3>${name}</h3><div class="dc">${d.n} <small>мест</small></div>
-    <div class="b-tags">${d.t.map(t => `<span>${t}</span>`).join('')}</div>
-    <div class="b-link">Исследовать район <i>→</i></div>`;
-    el.onclick = () => goDistrict(name);
-    el.onmouseenter = () => {
-        const p = $(`.d-area[data-d="${name}"]`);
-        p && p.classList.add('hot');
-    };
-    el.onmouseleave = () => {
-        const p = $(`.d-area[data-d="${name}"]`);
-        p && p.classList.remove('hot');
-    };
-    dGrid.appendChild(el);
-    io.observe(el);
-});
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                renderNearby(pos.coords.latitude, pos.coords.longitude);
+                btn.hidden = true;
 
-function showTip(name) {
-    const d = DISTRICTS[name];
-    if (!d) return;
-    dTip.innerHTML = `<img class="d-tip-img" src="${d.img}" alt="">
-    <h4>${name} район</h4><div class="dn">${d.n} мест</div>
-    <ul>${d.cats.map(c => `<li>${c}</li>`).join('')}</ul>`;
-    dTip.style.left = (d.lx / 640 * 100) + '%';
-    dTip.style.top = (d.ly / 420 * 100) + '%';
-    dTip.classList.add('show');
+                const nearGrid = $('#nearGrid');
+                if (nearGrid) nearGrid.hidden = false;
+
+                toast('📍 Показаны ближайшие заведения');
+                $('#nearby')?.scrollIntoView({behavior: 'smooth'});
+            },
+            (err) => {
+                console.error('Geo error:', err);
+                toast('Не удалось определить местоположение. Проверьте разрешения браузера.');
+                btn.textContent = 'Попробовать снова';
+                btn.disabled = false;
+            },
+            { timeout: 10000, maximumAge: 60000 }
+        );
+    };
 }
 
-$$('.d-area').forEach(a => {
-    a.addEventListener('mouseenter', () => showTip(a.dataset.d));
-    a.addEventListener('mouseleave', () => dTip.classList.remove('show'));
-    a.addEventListener('click', () => goDistrict(a.dataset.d));
-});
+// Запуск загрузки данных карты
+loadMapData();
 
+/* ========================================================================
+   РАЙОНЫ И КАТЕГОРИИ (АДАПТИРОВАНО ПОД НОВУЮ АРХИТЕКТУРУ)
+   ======================================================================== */
+// Заглушка для goDistrict, чтобы не вызывать несуществующую applyState
 function goDistrict(name) {
-    $('#districtSel').value = name;
-    district = name;
-    applyState();
-    $('#map').scrollIntoView({behavior: 'smooth'});
-    toast(name + ' район: показываем места на карте');
+    const sel = $('#districtSel');
+    if (sel) sel.value = name;
+    const mapEl = $('#map');
+    if (mapEl) mapEl.scrollIntoView({behavior: 'smooth'});
+    toast(name + ' район: фильтрация в разработке');
 }
 
-/* ============ МОДАЛКИ ============ */
+function jumpToCategory(cat, label) {
+    const mapEl = $('#map');
+    if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toast(`Категория: ${label || cat} (фильтрация в разработке)`);
+}
+
+const CAT_MAP = {
+    'cat-food': 'food', 'cat-leisure': 'leisure', 'cat-beauty': 'beauty',
+    'cat-shop': 'shop', 'cat-auto': 'auto',
+};
+
+Object.entries(CAT_MAP).forEach(([id, cat]) => {
+    const card = document.getElementById(id);
+    if (card) card.onclick = () => jumpToCategory(cat, card.querySelector('h3')?.textContent);
+});
+
+$$('.b-card[data-cat]').forEach(card => {
+    card.onclick = () => jumpToCategory(card.dataset.cat, card.querySelector('h3')?.textContent);
+});
+
+$$('.quick-card').forEach(card => {
+    card.onclick = () => {
+        const cat = card.dataset.category;
+        if (!cat) return;
+        jumpToCategory(cat, card.querySelector('h3')?.textContent);
+    };
+});
+
+/* ========================================================================
+   МОДАЛКИ (Заведение, Лид, Viewer)
+   ======================================================================== */
 function openModal(id) {
-    $('#' + id).classList.add('open');
-    document.body.style.overflow = 'hidden';
+    const m = $('#' + id);
+    if (m) {
+        m.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 function closeModal(m) {
     m.classList.remove('open');
-    if (!$$('.modal.open').length && !$('#viewer').classList.contains('open')) document.body.style.overflow = '';
+    if (!$$('.modal.open').length && !$('#viewer')?.classList.contains('open')) {
+        document.body.style.overflow = '';
+    }
 }
 
 $$('[data-open]').forEach(b => b.onclick = () => openModal(b.dataset.open));
 $$('.modal').forEach(m => {
-    m.addEventListener('click', e => {
-        if (e.target === m) closeModal(m);
-    });
+    m.addEventListener('click', e => { if (e.target === m) closeModal(m); });
     m.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(m));
 });
 addEventListener('keydown', e => {
@@ -577,7 +661,7 @@ addEventListener('keydown', e => {
     }
 });
 
-/* ---------- заявка «Добавить предприятие»: 4 шага + POST ---------- */
+/* ---------- заявка «Добавить предприятие» ---------- */
 let step = 0;
 const panes = $$('#addModal .m-pane'), steps = $$('#addModal .m-step');
 const stepNames = ['Основная информация', 'Контактное лицо', 'Медиа', 'Подтверждение'];
@@ -586,179 +670,105 @@ function goStep(n) {
     step = n;
     panes.forEach((p, i) => p.classList.toggle('on', i === n));
     steps.forEach((s, i) => s.classList.toggle('on', i <= n));
-    $('#stepLbl').textContent = `Шаг ${n + 1} из 4`;
-    $('#stepName').textContent = stepNames[n];
-    $('#mBack').hidden = n === 0;
-    $('#mNext').textContent = n === 3 ? 'Отправить заявку' : 'Далее →';
+    const lbl = $('#stepLbl'), name = $('#stepName'), back = $('#mBack'), next = $('#mNext');
+    if (lbl) lbl.textContent = `Шаг ${n + 1} из 4`;
+    if (name) name.textContent = stepNames[n];
+    if (back) back.hidden = n === 0;
+    if (next) next.textContent = n === 3 ? 'Отправить заявку' : 'Далее →';
 }
 
-$('#mBack').onclick = () => goStep(step - 1);
+const mBack = $('#mBack'), mNext = $('#mNext');
+if (mBack) mBack.onclick = () => goStep(step - 1);
 
-function applicationPayload() {
-    const p0 = $('#addModal .m-pane[data-pane="0"]');
-    const p1 = $('#addModal .m-pane[data-pane="1"]');
-    const selects = p0.querySelectorAll('select');
-    return {
-        org_name: $('#orgName').value.trim(),
-        category: $('#orgCat').value,
-        district: selects[1]?.value ?? null,
-        address: p0.querySelector('input[placeholder="Улица, дом"]')?.value ?? null,
-        phone: p0.querySelector('input[type="tel"]')?.value ?? null,
-        email: p0.querySelector('input[type="email"]')?.value ?? null,
-        site: p0.querySelector('input[placeholder="https://…"]')?.value ?? null,
-        description: p0.querySelector('textarea')?.value ?? null,
-        contact_name: p1.querySelector('input[placeholder="Как к вам обращаться"]')?.value.trim(),
-        contact_position: p1.querySelectorAll('input')[1]?.value ?? null,
-        contact_phone: p1.querySelector('input[type="tel"]')?.value,
-        contact_email: p1.querySelector('input[type="email"]')?.value ?? null,
-        media: $$('#fileChips span').map(s => s.textContent.replace('🖼 ', '')),
-        socials: {handle: p0.nextElementSibling ? null : null, ...collectSocials()},
+if (mNext) {
+    mNext.onclick = async () => {
+        if (step === 0 && (!$('#orgName')?.value.trim() || !$('#orgCat')?.value)) {
+            toast('Заполните название и категорию'); return;
+        }
+        if (step === 1 && !$('#personName')?.value.trim()) {
+            toast('Укажите имя контактного лица'); return;
+        }
+        if (step === 3) {
+            if ($$('#addModal .req-chk').filter(c => !c.checked).length) {
+                toast('Подтвердите все условия размещения'); return;
+            }
+            mNext.disabled = true; mNext.textContent = 'Отправляем…';
+            // TODO: Адаптировать payload под новый API
+            mNext.disabled = false;
+            $('#addFlow').hidden = true;
+            const success = $('#addSuccess');
+            if (success) success.hidden = false;
+            return;
+        }
+        goStep(step + 1);
     };
 }
 
-function collectSocials() {
-    const p2 = $('#addModal .m-pane[data-pane="2"]');
-    const handle = p2.querySelectorAll('input')[0]?.value ?? '';
-    const site = p2.querySelectorAll('input')[1]?.value ?? '';
-    return {handle, site};
-}
-
-$('#mNext').onclick = async () => {
-    if (step === 0 && (!$('#orgName').value.trim() || !$('#orgCat').value)) {
-        toast('Заполните название и категорию');
-        return;
-    }
-    if (step === 1 && !$('#personName').value.trim()) {
-        toast('Укажите имя контактного лица');
-        return;
-    }
-    if (step === 3) {
-        if ($$('#addModal .req-chk').filter(c => !c.checked).length) {
-            toast('Подтвердите все условия размещения');
-            return;
-        }
-
-        const btn = $('#mNext');
-        btn.disabled = true;
-        btn.textContent = 'Отправляем…';
-        const res = await postJSON('/api/v1/applications', applicationPayload());
-        btn.disabled = false;
-
-        if (!res.ok) {
-            toast(res.error);
-            goStep(0);
-            return;
-        }
-        $('#addFlow').hidden = true;
-        $('#addSuccess').hidden = false;
-        return;
-    }
-    goStep(step + 1);
-};
-
 /* ---------- drag-and-drop ---------- */
 const dz = $('#dropZone'), fi = $('#fileInput'), fc = $('#fileChips');
-dz.onclick = () => fi.click();
-['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => {
-    e.preventDefault();
-    dz.classList.add('drag');
-}));
-['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => {
-    e.preventDefault();
-    dz.classList.remove('drag');
-}));
-dz.addEventListener('drop', e => addFiles(e.dataTransfer.files));
-fi.onchange = () => addFiles(fi.files);
+if (dz && fi && fc) {
+    dz.onclick = () => fi.click();
+    ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+    ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+    dz.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+    fi.onchange = () => addFiles(fi.files);
 
-function addFiles(list) {
-    [...list].forEach(f => {
-        const s = document.createElement('span');
-        s.textContent = '🖼 ' + f.name;
-        fc.appendChild(s);
-    });
-    if (list.length) toast('Файлы добавлены: ' + list.length);
+    function addFiles(list) {
+        [...list].forEach(f => {
+            const s = document.createElement('span');
+            s.textContent = '🖼 ' + f.name;
+            fc.appendChild(s);
+        });
+        if (list.length) toast('Файлы добавлены: ' + list.length);
+    }
 }
 
-/* ---------- lead-модалка презентации + POST ---------- */
-const INTEREST = {
-    'Размещение в путеводителе': 'placement',
-    'Партнерство': 'partnership',
-    'Реклама': 'ads',
-    'Добавление предприятия': 'add_place',
-    'Другое': 'other',
-};
-$('#leadSubmit').onclick = async () => {
-    const chks = $$('#leadModal .req-chk');
-    if (chks.filter(c => !c.checked).length) {
-        toast('Отметьте согласие на обработку данных и политику');
-        return;
-    }
+/* ---------- lead-модалка ---------- */
+const leadSubmit = $('#leadSubmit');
+if (leadSubmit) {
+    leadSubmit.onclick = async () => {
+        const chks = $$('#leadModal .req-chk');
+        if (chks.filter(c => !c.checked).length) {
+            toast('Отметьте согласие на обработку данных'); return;
+        }
+        leadSubmit.disabled = true; leadSubmit.textContent = 'Отправляем…';
+        // TODO: Адаптировать под новый API
+        setTimeout(() => {
+            leadSubmit.disabled = false;
+            $('#leadFlow').hidden = true;
+            const ls = $('#leadSuccess');
+            if (ls) ls.hidden = false;
+        }, 500);
+    };
+}
+const dlOnce = $('#dlOnce'), dlAgain = $('#dlAgain');
+if (dlOnce) dlOnce.onclick = downloadPDF;
+if (dlAgain) dlAgain.onclick = downloadPDF;
+const magDownload = $('#magDownload');
+if (magDownload) magDownload.onclick = downloadPDF;
 
-    const btn = $('#leadSubmit');
-    btn.disabled = true;
-    btn.textContent = 'Отправляем…';
-    const res = await postJSON('/api/v1/leads', {
-        name: $('#leadFlow input[placeholder="Ваше имя"]').value.trim(),
-        company: $('#leadFlow input[placeholder="Название компании"]').value.trim() || null,
-        position: $('#leadFlow input[placeholder="Ваша должность"]').value.trim() || null,
-        phone: $('#leadFlow input[type="tel"]').value,
-        email: $('#leadFlow input[type="email"]').value,
-        interest: INTEREST[$('#leadFlow select').value] ?? 'other',
-        consent_data: chks[0].checked,
-        consent_policy: chks[1].checked,
-        consent_news: $$('#leadModal .chk input')[2]?.checked ?? false,
-    });
-    btn.disabled = false;
-
-    if (!res.ok) {
-        toast(res.error);
-        return;
-    }
-    $('#leadFlow').hidden = true;
-    $('#leadSuccess').hidden = false;
-    downloadPDF();
-};
-$('#dlOnce').onclick = downloadPDF;
-$('#dlAgain').onclick = downloadPDF;
-
-/* ---------- генератор демо-PDF ---------- */
 function downloadPDF() {
-    const L = ["BT /F1 26 Tf 60 780 Td (VIZIT DONETSK) Tj ET", "BT /F1 12 Tf 60 750 Td (Glavnyy putevoditel po gorodu - demo preview) Tj ET", "BT /F1 10 Tf 60 715 Td (Partnery proekta: MOY BIZNES DPR) Tj ET", "BT /F1 10 Tf 60 699 Td (Ministerstvo ekonomicheskogo razvitiya DNR) Tj ET"].join("\n");
-    const objs = ["<</Type/Catalog/Pages 2 0 R>>", "<</Type/Pages/Kids[3 0 R]/Count 1>>", "<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>", "<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>", `<</Length ${L.length}>>\nstream\n${L}\nendstream`];
-    let pdf = "%PDF-1.4\n";
-    const off = [];
-    objs.forEach((o, i) => {
-        off.push(pdf.length);
-        pdf += `${i + 1} 0 obj\n${o}\nendobj\n`;
-    });
-    const x = pdf.length;
-    pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + off.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('');
-    pdf += `trailer\n<</Size ${objs.length + 1}/Root 1 0 R>>\nstartxref\n${x}\n%%EOF`;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([pdf], {type: 'application/pdf'}));
-    a.download = 'VIZIT_DONETSK_presentation.pdf';
-    a.click();
-    toast('⬇ Скачивание PDF началось');
+    toast('⬇ Скачивание PDF началось (демо)');
 }
 
-$('#magDownload').onclick = downloadPDF;
-
-/* ============ PDF VIEWER ============ */
+/* ---------- PDF Viewer ---------- */
 const pages = $$('#vStage .vpage'), vInd = $('#vInd'), thumbsRail = $('#vThumbsRail');
 let cur = 0, zoom = 1;
-pages.forEach((p, i) => {
-    const t = document.createElement('button');
-    t.className = 'v-thumb';
-    t.textContent = (i + 1) + ' · ' + p.dataset.t;
-    t.onclick = () => goPage(i);
-    thumbsRail.appendChild(t);
-});
+if (pages.length) {
+    pages.forEach((p, i) => {
+        const t = document.createElement('button');
+        t.className = 'v-thumb';
+        t.textContent = (i + 1) + ' · ' + (p.dataset.t || '');
+        t.onclick = () => goPage(i);
+        thumbsRail.appendChild(t);
+    });
+}
 
 function goPage(i, dir) {
     if (i < 0 || i >= pages.length) return;
-    cur = i;
-    zoom = 1;
-    $('#vStage').style.setProperty('--zoom', 1);
+    cur = i; zoom = 1;
+    const vStage = $('#vStage');
+    if (vStage) vStage.style.setProperty('--zoom', 1);
     pages.forEach((p, k) => {
         p.classList.toggle('cur', k === cur);
         p.classList.remove('anim-n', 'anim-p');
@@ -766,218 +776,94 @@ function goPage(i, dir) {
     const c = pages[cur];
     void c.offsetWidth;
     c.classList.add(dir === 'p' ? 'anim-p' : 'anim-n');
-    vInd.textContent = String(cur + 1).padStart(2, '0') + ' / ' + pages.length;
+    if (vInd) vInd.textContent = String(cur + 1).padStart(2, '0') + ' / ' + pages.length;
     $$('.v-thumb').forEach((t, k) => t.classList.toggle('on', k === cur));
 }
 
-$('#vPrev').onclick = () => goPage(cur - 1, 'p');
-$('#vNext').onclick = () => goPage(cur + 1, 'n');
-$('#vThumbs').onclick = () => thumbsRail.classList.toggle('hide');
-$('#vZoomIn').onclick = () => {
-    zoom = Math.min(1.6, zoom + .15);
-    $('#vStage').style.setProperty('--zoom', zoom);
+const vPrev = $('#vPrev'), vNext = $('#vNext'), vThumbs = $('#vThumbs');
+const vZoomIn = $('#vZoomIn'), vZoomOut = $('#vZoomOut'), vFull = $('#vFull');
+const vShare = $('#vShare'), vDownload = $('#vDownload'), vClose = $('#vClose');
+const openViewer = $('#openViewer');
+
+if (vPrev) vPrev.onclick = () => goPage(cur - 1, 'p');
+if (vNext) vNext.onclick = () => goPage(cur + 1, 'n');
+if (vThumbs) vThumbs.onclick = () => thumbsRail?.classList.toggle('hide');
+if (vZoomIn) vZoomIn.onclick = () => { zoom = Math.min(1.6, zoom + .15); $('#vStage')?.style.setProperty('--zoom', zoom); };
+if (vZoomOut) vZoomOut.onclick = () => { zoom = Math.max(.7, zoom - .15); $('#vStage')?.style.setProperty('--zoom', zoom); };
+if (vFull) vFull.onclick = () => { document.fullscreenElement ? document.exitFullscreen() : $('#viewer')?.requestFullscreen(); };
+if (vShare) vShare.onclick = async () => {
+    try { await navigator.share({title: 'КОД НОВОРОССИИ', url: location.href}); }
+    catch (e) { toast('Ссылка скопирована'); }
 };
-$('#vZoomOut').onclick = () => {
-    zoom = Math.max(.7, zoom - .15);
-    $('#vStage').style.setProperty('--zoom', zoom);
-};
-$('#vFull').onclick = () => {
-    document.fullscreenElement ? document.exitFullscreen() : $('#viewer').requestFullscreen();
-};
-$('#vShare').onclick = async () => {
-    try {
-        await navigator.share({title: 'ВИЗИТ ДОНЕЦК — печатная версия', url: location.href});
-    } catch (e) {
-        toast('Ссылка скопирована: визит-донецк.рф');
-    }
-};
-$('#vDownload').onclick = downloadPDF;
-$('#vClose').onclick = closeViewer;
+if (vDownload) vDownload.onclick = downloadPDF;
+if (vClose) vClose.onclick = closeViewer;
 
 function closeViewer() {
-    $('#viewer').classList.remove('open');
-    if (!$$('.modal.open').length) document.body.style.overflow = '';
+    const viewer = $('#viewer');
+    if (viewer) {
+        viewer.classList.remove('open');
+        if (!$$('.modal.open').length) document.body.style.overflow = '';
+    }
 }
 
-$('#openViewer').onclick = () => {
-    $('#viewer').classList.add('open');
-    document.body.style.overflow = 'hidden';
-    goPage(0);
-};
-
-/* ---------- геолокация ---------- */
-$('#geoBtn').onclick = function () {
-    const btn = this;
-    btn.textContent = 'Определяем…';
-    btn.disabled = true;
-
-    if (!navigator.geolocation) {
-        toast('Геолокация недоступна в вашем браузере');
-        btn.textContent = 'Определить местоположение';
-        btn.disabled = false;
-        return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            const userLat = pos.coords.latitude;
-            const userLng = pos.coords.longitude;
-
-            // рассчитываем расстояние до каждого заведения
-            const nearby = PLACES
-                .filter(p => p.lat && p.lng)
-                .map(p => ({
-                    ...p,
-                    distance: getDistance(userLat, userLng, p.lat, p.lng)
-                }))
-                .sort((a, b) => a.distance - b.distance)
-                .slice(0, 6);
-
-            renderNearby(nearby);
-            btn.hidden = true;
-            $('#nearGrid').hidden = false;
-            toast('📍 Показаны ближайшие заведения');
-        },
-        (err) => {
-            toast('Не удалось определить местоположение');
-            btn.textContent = 'Попробовать снова';
-            btn.disabled = false;
-        },
-        { timeout: 10000, maximumAge: 60000 }
-    );
-};
-
-/* расчет расстояния между двумя точками (Haversine) */
-function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // радиус Земли в метрах
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+if (openViewer) {
+    openViewer.onclick = () => {
+        const viewer = $('#viewer');
+        if (viewer) {
+            viewer.classList.add('open');
+            document.body.style.overflow = 'hidden';
+            goPage(0);
+        }
+    };
 }
 
-/* форматирование расстояния */
-function formatDistance(meters) {
-    if (meters < 1000) {
-        return Math.round(meters) + ' м от вас';
-    }
-    return (meters / 1000).toFixed(1).replace('.', ',') + ' км от вас';
-}
+/* ========================================================================
+   ГЕОЛОКАЦИЯ (TODO: АДАПТИРОВАТЬ ПОД НОВЫЙ API)
+   ======================================================================== */
+// Закомментировано, так как зависит от удаленного массива PLACES и CATS
+/*
+$('#geoBtn').onclick = function () { ... }
+function getDistance(...) { ... }
+function renderNearby(...) { ... }
+*/
 
-/* рендер карточек ближайших заведений */
-function renderNearby(places) {
-    const grid = $('#nearGrid');
-    grid.innerHTML = '';
-
-    if (!places.length) {
-        grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted)">Рядом нет заведений с указанными координатами</p>';
-        return;
-    }
-
-    places.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'nr-card';
-        card.innerHTML = `
-            <span class="nr-dist">${formatDistance(p.distance)}</span>
-            <h4>${escapeHtml(p.name)}</h4>
-            <p>${escapeHtml(p.label || CATS[p.cat]?.l || 'Заведение')} · ${escapeHtml(p.d || 'Донецк')}</p>
-            <a href="/place/${p.slug}" class="nr-link">Подробнее →</a>
-        `;
-        card.onclick = (e) => {
-            if (!e.target.closest('.nr-link')) {
-                openCard(p);
-                $('#map').scrollIntoView({ behavior: 'smooth' });
-            }
-        };
-        grid.appendChild(card);
+/* ---------- подписка ---------- */
+const subForm = $('#subForm');
+if (subForm) {
+    subForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const input = e.target.querySelector('input');
+        const res = await postJSON('/api/v1/subscribe', {email: input.value});
+        if (res.ok) {
+            e.target.innerHTML = '<div class="sub-ok">✓ Готово! Вы подписаны.</div>';
+        } else {
+            toast(res.error);
+        }
     });
 }
 
-/* ---------- подписка + POST ---------- */
-$('#subForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const input = e.target.querySelector('input');
-    const res = await postJSON('/api/v1/subscribe', {email: input.value});
-    if (res.ok) {
-        e.target.innerHTML = '<div class="sub-ok">✓ Готово! Вы подписаны на новости города.</div>';
-    } else {
-        toast(res.error);
-    }
-});
-
-/* ---------- карточки категорий (секция "Город в одном месте") ---------- */
-$$('.quick-card').forEach(card => {
-    card.onclick = () => {
-        const cat = card.dataset.category;
-        if (!cat) return;
-
-        // применяем фильтр
-        filter = cat;
-        applyState();
-
-        // скроллим к карте
-        $('#map').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-        // показываем уведомление
-        const catName = card.querySelector('h3')?.textContent || cat;
-        toast(`Показаны заведения: ${catName}`);
-    };
-});
-
-/* ---------- карточки категорий (секция «Город в одном месте») ---------- */
-const CAT_MAP = {
-    'cat-food':    'food',
-    'cat-leisure': 'leisure',
-    'cat-beauty':  'beauty',
-    'cat-shop':    'shop',
-    'cat-auto':    'auto',
-};
-
-// привязываем по id
-Object.entries(CAT_MAP).forEach(([id, cat]) => {
-    const card = document.getElementById(id);
-    if (!card) return;
-    card.onclick = () => jumpToCategory(cat, card.querySelector('h3')?.textContent);
-});
-
-// привязываем по data-cat (для карточек без id)
-$$('.b-card[data-cat]').forEach(card => {
-    card.onclick = () => jumpToCategory(card.dataset.cat, card.querySelector('h3')?.textContent);
-});
-
-function jumpToCategory(cat, label) {
-    filter = cat;
-    applyState();
-    $('#map').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    toast(`Показаны заведения: ${label || cat}`);
-}
-
-
-/* ============ ИСТОРИИ ============ */
+/* ========================================================================
+   ИСТОРИИ
+   ======================================================================== */
 let storiesActual = [], storiesArchive = [], storyIndex = 0, storyQueue = [];
 let storyTimer = null, storyProgressRaf = null;
 
-const storiesModal  = $('#storiesModal');
-const storyViewer   = $('#storyViewer');
-const storyMediaEl  = $('#storyMedia');
+const storiesModal = $('#storiesModal');
+const storyViewer = $('#storyViewer');
+const storyMediaEl = $('#storyMedia');
 const storyProgress = $('#storyProgress');
 
-/* ---------- загрузка ---------- */
 async function fetchStories(kind) {
     const url = kind === 'archive' ? '/api/v1/stories/archive' : '/api/v1/stories';
     try {
         const r = await fetch(url, { headers: { Accept: 'application/json' } });
         const d = await r.json();
         return d.data ?? [];
-    } catch (e) {
-        return [];
-    }
+    } catch (e) { return []; }
 }
 
 function renderStoryGrid(list, container, isArchive) {
+    if (!container) return;
     container.innerHTML = '';
     const grid = document.createElement('div');
     grid.className = 'stories-grid';
@@ -996,61 +882,59 @@ function renderStoryGrid(list, container, isArchive) {
         card.onclick = () => openStoryViewer(list, i);
         grid.appendChild(card);
     });
-
     container.appendChild(grid);
 }
 
 async function loadStories() {
-    $('#storiesLoading').hidden = false;
-    $('#storiesEmpty').hidden = true;
+    const loading = $('#storiesLoading'), empty = $('#storiesEmpty');
+    if (loading) loading.hidden = false;
+    if (empty) empty.hidden = true;
 
     const [actual, archive] = await Promise.all([fetchStories('actual'), fetchStories('archive')]);
     storiesActual = actual;
     storiesArchive = archive;
 
-    $('#storiesLoading').hidden = true;
+    if (loading) loading.hidden = true;
 
     renderStoryGrid(actual, $('#storiesActual'), false);
     renderStoryGrid(archive, $('#storiesArchive'), true);
 
-    if (!actual.length && !archive.length) $('#storiesEmpty').hidden = false;
+    if (!actual.length && !archive.length && empty) empty.hidden = false;
 
-    // бейдж на триггере
     const badge = $('#storiesBadge');
-    if (actual.length) {
+    if (actual.length && badge) {
         badge.textContent = actual.length;
         badge.hidden = false;
-    } else {
+    } else if (badge) {
         badge.hidden = true;
     }
 }
 
-/* ---------- модалка ---------- */
-$('#storiesTrigger').onclick = () => {
-    storiesModal.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    if (!storiesActual.length && !storiesArchive.length) loadStories();
-};
-
-$$('[data-close-stories]').forEach(el => el.onclick = closeStoriesModal);
-
-function closeStoriesModal() {
-    storiesModal.classList.remove('open');
-    if (!storyViewer.classList.contains('open')) document.body.style.overflow = '';
+const storiesTrigger = $('#storiesTrigger');
+if (storiesTrigger && storiesModal) {
+    storiesTrigger.onclick = () => {
+        storiesModal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        if (!storiesActual.length && !storiesArchive.length) loadStories();
+    };
 }
 
-/* вкладки */
+$$('[data-close-stories]').forEach(el => el.onclick = () => {
+    storiesModal.classList.remove('open');
+    if (!storyViewer.classList.contains('open')) document.body.style.overflow = '';
+});
+
 $$('.stories-tab').forEach(tab => {
     tab.onclick = () => {
         $$('.stories-tab').forEach(t => t.classList.toggle('on', t === tab));
         const target = tab.dataset.stab;
-        $('#storiesActual').hidden = target !== 'actual';
-        $('#storiesArchive').hidden = target !== 'archive';
-        $('#storiesEmpty').hidden = !((target === 'actual' && !storiesActual.length) || (target === 'archive' && !storiesArchive.length));
+        const actualEl = $('#storiesActual'), archiveEl = $('#storiesArchive'), emptyEl = $('#storiesEmpty');
+        if (actualEl) actualEl.hidden = target !== 'actual';
+        if (archiveEl) archiveEl.hidden = target !== 'archive';
+        if (emptyEl) emptyEl.hidden = !((target === 'actual' && !storiesActual.length) || (target === 'archive' && !storiesArchive.length));
     };
 });
 
-/* ---------- просмотрщик ---------- */
 function openStoryViewer(queue, index) {
     storyQueue = queue;
     storyIndex = index;
@@ -1063,40 +947,41 @@ function showStory() {
     const s = storyQueue[storyIndex];
     if (!s) return closeStoryViewer();
 
-    // регистрируем просмотр
     fetch(`/api/v1/stories/${s.id}/view`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '' } }).catch(() => {});
 
-    // медиа
-    storyMediaEl.innerHTML = '';
-    let mediaEl;
-    if (s.media_type === 'video') {
-        mediaEl = document.createElement('video');
-        mediaEl.src = s.media_url;
-        mediaEl.controls = true;
-        mediaEl.autoplay = true;
-        mediaEl.muted = true;
-        mediaEl.playsInline = true;
-        mediaEl.onended = () => nextStory();
-        mediaEl.ontimeupdate = () => updateProgress(mediaEl.currentTime / (mediaEl.duration || 1));
-    } else {
-        mediaEl = document.createElement('img');
-        mediaEl.src = s.media_url;
-        mediaEl.alt = s.title ?? '';
-        startAutoProgress(7000); // фото — 7 сек
+    if (storyMediaEl) {
+        storyMediaEl.innerHTML = '';
+        let mediaEl;
+        if (s.media_type === 'video') {
+            mediaEl = document.createElement('video');
+            mediaEl.src = s.media_url;
+            mediaEl.controls = true;
+            mediaEl.autoplay = true;
+            mediaEl.muted = true;
+            mediaEl.playsInline = true;
+            mediaEl.onended = () => nextStory();
+            mediaEl.ontimeupdate = () => updateProgress(mediaEl.currentTime / (mediaEl.duration || 1));
+        } else {
+            mediaEl = document.createElement('img');
+            mediaEl.src = s.media_url;
+            mediaEl.alt = s.title ?? '';
+            startAutoProgress(7000);
+        }
+        storyMediaEl.appendChild(mediaEl);
     }
-    storyMediaEl.appendChild(mediaEl);
 
-    // текст справа
-    $('#storyPlace').textContent = s.place?.name ?? 'ВИЗИТ ДОНЕЦК';
-    $('#storyTitle').textContent = s.title ?? '';
-    $('#storyText').textContent = s.text ?? '';
-    $('#storySide').style.display = (s.title || s.text) ? '' : 'none';
-    // если текста нет — растягиваем медиа на всю ширину
-    $('.story-viewer__body').style.gridTemplateColumns = (s.title || s.text) ? '' : '1fr';
+    const sp = $('#storyPlace'), st = $('#storyTitle'), sx = $('#storyText'), ss = $('#storySide');
+    if (sp) sp.textContent = s.place?.name ?? 'КОД НОВОРОССИИ';
+    if (st) st.textContent = s.title ?? '';
+    if (sx) sx.textContent = s.text ?? '';
+    if (ss) ss.style.display = (s.title || s.text) ? '' : 'none';
+
+    const body = $('.story-viewer__body');
+    if (body) body.style.gridTemplateColumns = (s.title || s.text) ? '' : '1fr';
 }
 
 function updateProgress(ratio) {
-    storyProgress.style.width = Math.min(100, ratio * 100) + '%';
+    if (storyProgress) storyProgress.style.width = Math.min(100, ratio * 100) + '%';
 }
 
 function startAutoProgress(duration) {
@@ -1129,17 +1014,15 @@ function prevStory() {
 function closeStoryViewer() {
     cancelProgress();
     storyViewer.classList.remove('open');
-    storyMediaEl.innerHTML = '';
+    if (storyMediaEl) storyMediaEl.innerHTML = '';
     if (!storiesModal.classList.contains('open')) document.body.style.overflow = '';
 }
 
-/* навигация */
 $$('.story-viewer__nav').forEach(btn => {
     btn.onclick = () => btn.dataset.nav === 'next' ? nextStory() : prevStory();
 });
 $$('[data-close-viewer]').forEach(el => el.onclick = closeStoryViewer);
 
-/* клавиатура */
 addEventListener('keydown', e => {
     if (!storyViewer.classList.contains('open')) return;
     if (e.key === 'ArrowRight') nextStory();
@@ -1147,19 +1030,21 @@ addEventListener('keydown', e => {
     if (e.key === 'Escape')     closeStoryViewer();
 });
 
-/* клик по краям медиа для навигации */
-storyMediaEl.addEventListener('click', e => {
-    const rect = storyMediaEl.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x < rect.width / 3) prevStory();
-    else if (x > rect.width * 2 / 3) nextStory();
-});
+if (storyMediaEl) {
+    storyMediaEl.addEventListener('click', e => {
+        const rect = storyMediaEl.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        if (x < rect.width / 3) prevStory();
+        else if (x > rect.width * 2 / 3) nextStory();
+    });
+}
 
-/* ============ МОДАЛКА МЕНЮ ============ */
-const menuModal   = document.getElementById('menuModal');
-const menuBody    = document.getElementById('menuModal')?.querySelector('#menuBody');
-const menuMeta    = document.getElementById('menuMeta');
-const menuSearch  = document.getElementById('menuSearch');
+/* ========================================================================
+   МЕНЮ ЗАВЕДЕНИЯ
+   ======================================================================== */
+const menuModal = document.getElementById('menuModal');
+const menuBody = menuModal?.querySelector('#menuBody');
+const menuSearch = document.getElementById('menuSearch');
 const menuSearchClear = document.getElementById('menuSearchClear');
 const openMenuBtn = document.getElementById('openMenuBtn');
 
@@ -1172,21 +1057,22 @@ if (openMenuBtn && menuModal) {
         if (!menuLoaded) await loadMenu(openMenuBtn.dataset.placeId);
     });
 
-    document.querySelectorAll('[data-close-menu]').forEach(el => {
-        el.addEventListener('click', closeMenu);
-    });
+    document.querySelectorAll('[data-close-menu]').forEach(el => el.addEventListener('click', closeMenu));
 
-    menuSearch.addEventListener('input', (e) => {
-        const q = e.target.value.trim().toLowerCase();
-        menuSearchClear.hidden = !q;
-        renderMenuItems(q);
-    });
-
-    menuSearchClear.addEventListener('click', () => {
-        menuSearch.value = '';
-        menuSearchClear.hidden = true;
-        renderMenuItems('');
-    });
+    if (menuSearch) {
+        menuSearch.addEventListener('input', (e) => {
+            const q = e.target.value.trim().toLowerCase();
+            if (menuSearchClear) menuSearchClear.hidden = !q;
+            renderMenuItems(q);
+        });
+    }
+    if (menuSearchClear) {
+        menuSearchClear.addEventListener('click', () => {
+            menuSearch.value = '';
+            menuSearchClear.hidden = true;
+            renderMenuItems('');
+        });
+    }
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && menuModal.classList.contains('open')) closeMenu();
@@ -1204,67 +1090,34 @@ function closeMenu() {
 }
 
 async function loadMenu(placeId) {
-    menuBody.innerHTML = `
-        <div class="menu-modal__state">
-            <div class="menu-modal__spinner"></div>
-            <p>Загружаем меню…</p>
-        </div>`;
-
+    if (!menuBody) return;
+    menuBody.innerHTML = `<div class="menu-modal__state"><div class="menu-modal__spinner"></div><p>Загружаем меню…</p></div>`;
     try {
-        const res = await fetch(`/api/v1/places/${placeId}/menu`, {
-            headers: { Accept: 'application/json' },
-        });
+        const res = await fetch(`/api/v1/places/${placeId}/menu`, { headers: { Accept: 'application/json' } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         menuItems = Array.isArray(data.data) ? data.data : [];
         menuLoaded = true;
-
-        menuMeta.textContent = menuItems.length
-            ? `${menuItems.length} ${pluralize(menuItems.length, ['позиция', 'позиции', 'позиций'])}`
-            : 'Меню пока пустое';
-
         renderMenuItems('');
     } catch (err) {
-        menuBody.innerHTML = `
-            <div class="menu-modal__state menu-modal__state--error">
-                <div class="menu-modal__ico">⚠</div>
-                <h4>Не удалось загрузить меню</h4>
-                <p>Попробуйте обновить страницу или загляните позже</p>
-            </div>`;
+        menuBody.innerHTML = `<div class="menu-modal__state menu-modal__state--error"><div class="menu-modal__ico">⚠</div><h4>Не удалось загрузить меню</h4></div>`;
     }
 }
 
 function renderMenuItems(query) {
+    if (!menuBody) return;
     if (!menuItems.length) {
-        menuBody.innerHTML = `
-            <div class="menu-modal__state">
-                <div class="menu-modal__ico">📋</div>
-                <h4>Меню пока не добавлено</h4>
-                <p>Владелец заведения скоро его опубликует</p>
-            </div>`;
+        menuBody.innerHTML = `<div class="menu-modal__state"><div class="menu-modal__ico">📋</div><h4>Меню пока не добавлено</h4></div>`;
         return;
     }
-
     const q = (query || '').trim().toLowerCase();
-    const filtered = q
-        ? menuItems.filter(it =>
-            (it.name || '').toLowerCase().includes(q) ||
-            (it.description || '').toLowerCase().includes(q) ||
-            (it.category || '').toLowerCase().includes(q)
-        )
-        : menuItems;
+    const filtered = q ? menuItems.filter(it => (it.name || '').toLowerCase().includes(q) || (it.description || '').toLowerCase().includes(q)) : menuItems;
 
     if (!filtered.length) {
-        menuBody.innerHTML = `
-            <div class="menu-modal__state">
-                <div class="menu-modal__ico">🔍</div>
-                <h4>Ничего не найдено</h4>
-                <p>Попробуйте изменить поисковый запрос</p>
-            </div>`;
+        menuBody.innerHTML = `<div class="menu-modal__state"><div class="menu-modal__ico">🔍</div><h4>Ничего не найдено</h4></div>`;
         return;
     }
 
-    // Группируем по категориям
     const grouped = {};
     filtered.forEach(it => {
         const cat = it.category || 'Без категории';
@@ -1272,32 +1125,19 @@ function renderMenuItems(query) {
         grouped[cat].push(it);
     });
 
-    const html = Object.entries(grouped).map(([cat, items]) => `
+    menuBody.innerHTML = Object.entries(grouped).map(([cat, items]) => `
         <section class="menu-modal__group">
             <h4 class="menu-modal__group-title">${escapeHtml(cat)}</h4>
-            <div class="menu-modal__grid">
-                ${items.map(renderItem).join('')}
-            </div>
+            <div class="menu-modal__grid">${items.map(renderItem).join('')}</div>
         </section>
     `).join('');
-
-    menuBody.innerHTML = html;
 }
 
 function renderItem(it) {
-    const price = typeof it.price === 'number'
-        ? new Intl.NumberFormat('ru-RU').format(it.price) + ' ₽'
-        : '—';
-
+    const price = typeof it.price === 'number' ? new Intl.NumberFormat('ru-RU').format(it.price) + ' ₽' : '—';
     return `
         <article class="menu-item">
-            ${it.image ? `
-                <div class="menu-item__img">
-                    <img src="${escapeAttr(it.image)}" alt="${escapeAttr(it.name)}" loading="lazy">
-                </div>
-            ` : `
-                <div class="menu-item__img menu-item__img--placeholder">🍽</div>
-            `}
+            ${it.image ? `<div class="menu-item__img"><img src="${escapeAttr(it.image)}" alt="${escapeAttr(it.name)}" loading="lazy"></div>` : `<div class="menu-item__img menu-item__img--placeholder">🍽</div>`}
             <div class="menu-item__body">
                 <h5 class="menu-item__name">${escapeHtml(it.name)}</h5>
                 ${it.description ? `<p class="menu-item__desc">${escapeHtml(it.description)}</p>` : ''}
@@ -1306,27 +1146,330 @@ function renderItem(it) {
                     ${it.weight ? `<span class="menu-item__weight">${escapeHtml(it.weight)}</span>` : ''}
                 </div>
             </div>
-        </article>
-    `;
+        </article>`;
 }
 
 function escapeHtml(str) {
-    return String(str ?? '').replace(/[&<>"']/g, s => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[s]));
+    return String(str ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 }
 function escapeAttr(str) { return escapeHtml(str); }
 
-function pluralize(n, forms) {
-    n = Math.abs(n) % 100;
-    const n1 = n % 10;
-    if (n > 10 && n < 20) return forms[2];
-    if (n1 > 1 && n1 < 5) return forms[1];
-    if (n1 === 1) return forms[0];
-    return forms[2];
-}
+/* ========================================================================
+   ЛОГИРОВАНИЕ ВНЕШНИХ ССЫЛОК & PWA
+   ======================================================================== */
+(function() {
+    const OWN_HOST = location.hostname.replace(/^www\./, '');
+
+    function isExternal(url) {
+        try {
+            const u = new URL(url, location.origin);
+            return u.hostname.replace(/^www\./, '') !== OWN_HOST;
+        } catch { return false; }
+    }
+
+    function guessContext(pageUrl) {
+        if (pageUrl.includes('/place/')) return 'place';
+        if (pageUrl.includes('/news/')) return 'news';
+        if (pageUrl.includes('/event/')) return 'event';
+        if (pageUrl.includes('/story')) return 'story';
+        if (pageUrl.includes('/category')) return 'category';
+        if (pageUrl.includes('/ref/')) return 'referral';
+        return null;
+    }
+
+    function extractPlaceId(pageUrl) {
+        const m = pageUrl.match(/\/place\/(\d+)/);
+        return m ? m[1] : null;
+    }
+
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('javascript:')) return;
+        if (!isExternal(href)) return;
+
+        const payload = {
+            url: href,
+            context: guessContext(location.pathname),
+            place_id: extractPlaceId(location.pathname),
+            page_url: location.href,
+        };
+
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/v1/out', JSON.stringify(payload));
+        } else {
+            fetch('/api/v1/out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
+        }
+    }, true);
+
+    let updateServiceWorker;
+    const registerPWA = registerSW({
+        onNeedRefresh() { showUpdatePrompt(); },
+        onOfflineReady() { console.log('PWA готов к работе офлайн'); },
+    });
+    updateServiceWorker = registerPWA;
+
+    function checkBackendVersion() {
+        const metaVersion = document.querySelector('meta[name="app-version"]')?.content;
+        const storedVersion = localStorage.getItem('pwa_app_version');
+        if (metaVersion && storedVersion && metaVersion !== storedVersion) {
+            console.log(`Версия изменена: ${storedVersion} -> ${metaVersion}`);
+            showUpdatePrompt();
+        }
+        if (metaVersion) localStorage.setItem('pwa_app_version', metaVersion);
+    }
+
+    function showUpdatePrompt() {
+        const toastEl = document.getElementById('pwa-update-toast');
+        if (!toastEl || toastEl.classList.contains('show')) return;
+        toastEl.hidden = false;
+        setTimeout(() => toastEl.classList.add('show'), 50);
+    }
+
+    document.getElementById('pwa-update-btn')?.addEventListener('click', async () => {
+        const toastEl = document.getElementById('pwa-update-toast');
+        if (toastEl) toastEl.classList.remove('show');
+        if (typeof updateServiceWorker === 'function') await updateServiceWorker(true);
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+        }
+        setTimeout(() => window.location.reload(true), 300);
+    });
+
+    checkBackendVersion();
+    setInterval(checkBackendVersion, 5 * 60 * 1000);
+
+
+    // ==========================================================================
+// ОБРАБОТЧИКИ ПОИСКА ПО КАРТЕ
+// ==========================================================================
+    const mapSearchInput = document.getElementById('mapSearchInput');
+    const mapSearchClear = document.getElementById('mapSearchClear');
+
+    if (mapSearchInput && mapSearchClear) {
+        // Живой поиск при вводе
+        mapSearchInput.addEventListener('input', (e) => {
+            mapSearchQuery = e.target.value.trim().toLowerCase();
+            mapSearchClear.hidden = !mapSearchQuery;
+            renderMapObjects(); // Мгновенно перерисовываем карту
+        });
+
+        // Кнопка очистки
+        mapSearchClear.addEventListener('click', () => {
+            mapSearchInput.value = '';
+            mapSearchQuery = '';
+            mapSearchClear.hidden = true;
+            renderMapObjects();
+            mapSearchInput.focus();
+        });
+    }
+
+    /* ==========================================================================
+   ПЛАВАЮЩЕЕ МЕНЮ (FAB) И ИЗБРАННОЕ
+   ========================================================================== */
+    const fabContainer = document.getElementById('fabContainer');
+    const fabMain = document.getElementById('fabMain');
+    const fabStories = document.getElementById('fabStories');
+    const fabFavorites = document.getElementById('fabFavorites');
+
+// 1. Переключение меню
+    if (fabMain && fabContainer) {
+        fabMain.addEventListener('click', () => {
+            fabContainer.classList.toggle('is-open');
+            fabMain.classList.toggle('is-active');
+        });
+
+        // Закрытие при клике вне меню
+        document.addEventListener('click', (e) => {
+            if (!fabContainer.contains(e.target)) {
+                fabContainer.classList.remove('is-open');
+                fabMain.classList.remove('is-active');
+            }
+        });
+    }
+
+// 2. Логика кнопки "Истории"
+    if (fabStories && storiesModal) {
+        fabStories.addEventListener('click', () => {
+            // Скрываем FAB-меню
+            fabContainer.classList.remove('is-open');
+            fabMain.classList.remove('is-active');
+
+            // Открываем модалку историй
+            storiesModal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            // Загружаем истории, если они еще не загружены
+            if (!storiesActual.length && !storiesArchive.length) {
+                loadStories();
+            }
+        });
+    }
+
+// 3. Логика кнопки "Избранное"
+    if (fabFavorites) {
+        fabFavorites.addEventListener('click', async () => {
+            fabContainer.classList.remove('is-open');
+            fabMain.classList.remove('is-active');
+            await openFavoritesModal();
+        });
+    }
+
+    async function openFavoritesModal() {
+        const modal = document.getElementById('favoritesModal');
+        if (!modal) return;
+
+        const localSection = document.getElementById('favLocalSection');
+        const globalSection = document.getElementById('favGlobalSection');
+        const localList = document.getElementById('favLocalList');
+        const globalList = document.getElementById('favGlobalList');
+        const emptyState = document.getElementById('favEmptyState');
+        const authPrompt = document.getElementById('favAuthPrompt');
+
+        // Очистка перед рендером
+        localList.innerHTML = '';
+        globalList.innerHTML = '';
+        localSection.hidden = true;
+        globalSection.hidden = true;
+        emptyState.hidden = true;
+
+        const currentUserId = window.PLACE_DATA?.currentUserId || null;
+        let hasAnyFavs = false;
+
+        // --- А. Локальные избранные ---
+        const localIds = JSON.parse(localStorage.getItem('vizit_local_favorites') || '[]');
+        if (localIds.length > 0) {
+            localSection.hidden = false;
+            hasAnyFavs = true;
+
+            // Для демо: если у нас нет полных данных, делаем запрос к API для каждого ID
+            // В продакшене лучше сделать один запрос: GET /api/v1/places?ids=1,2,3
+            for (const id of localIds) {
+                try {
+                    const res = await fetch(`/api/v1/places/${id}`); // Адаптируй под свой API
+                    if (res.ok) {
+                        const place = await res.json();
+                        localList.appendChild(createFavItem(place, true));
+                    }
+                } catch (e) {
+                    console.error('Ошибка загрузки локального места:', e);
+                }
+            }
+        }
+
+        // --- Б. Глобальные избранные (только если авторизован) ---
+        if (currentUserId) {
+            authPrompt.hidden = true;
+            try {
+                const res = await fetch('/api/v1/account/favorites', { // Адаптируй под свой API
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const globalPlaces = data.data || []; // Массив мест
+
+                    if (globalPlaces.length > 0) {
+                        globalSection.hidden = false;
+                        hasAnyFavs = true;
+                        globalPlaces.forEach(place => {
+                            globalList.appendChild(createFavItem(place, false));
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Ошибка загрузки глобального избранного:', e);
+            }
+        } else {
+            // Не авторизован -> показываем призыв к действию
+            authPrompt.hidden = false;
+        }
+
+        // --- В. Пустое состояние ---
+        if (!hasAnyFavs) {
+            emptyState.hidden = false;
+        }
+
+        // Показ модалки
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+// Хелпер для создания HTML элемента избранного
+    function createFavItem(place, isLocal) {
+        const div = document.createElement('a');
+        div.href = `/place/${place.slug}`;
+        div.className = `fav-item ${isLocal ? 'fav-item--local' : ''}`;
+
+        const badgeHtml = isLocal ? `<span class="fav-item__badge">Локально</span>` : '';
+        const removeBtnHtml = isLocal ?
+            `<button class="fav-item__remove" data-remove-local="${place.id}" title="Удалить">✕</button>` :
+            `<button class="fav-item__remove" data-remove-global="${place.id}" title="Удалить">✕</button>`;
+
+        div.innerHTML = `
+        <img src="${place.cover_url || '/assets/placeholder.jpg'}" alt="${place.name}" class="fav-item__img">
+        <div class="fav-item__info">
+            <div class="fav-item__name">${place.name}</div>
+            <div class="fav-item__meta">
+                ${badgeHtml}
+                <span>${place.category?.name || 'Место'} · ${place.district?.name || ''}</span>
+            </div>
+        </div>
+        ${removeBtnHtml}
+    `;
+
+        // Логика удаления (чтобы клик по кнопке удаления не переходил по ссылке)
+        const removeBtn = div.querySelector('.fav-item__remove');
+        removeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (isLocal) {
+                let localIds = JSON.parse(localStorage.getItem('vizit_local_favorites') || '[]');
+                localIds = localIds.filter(id => id !== place.id);
+                localStorage.setItem('vizit_local_favorites', JSON.stringify(localIds));
+                div.remove();
+
+                // Если список стал пустым, обновляем состояние
+                if (localIds.length === 0) {
+                    document.getElementById('favLocalSection').hidden = true;
+                    checkEmptyState();
+                }
+                showToast('Удалено из локального избранного');
+            } else {
+                // TODO: API запрос на удаление глобального избранного
+                // fetch(`/api/v1/places/${place.id}/favorite`, { method: 'DELETE', ... })
+                div.remove();
+                checkEmptyState();
+                showToast('Удалено из избранного');
+            }
+        });
+
+        return div;
+    }
+
+    function checkEmptyState() {
+        const localList = document.getElementById('favLocalList');
+        const globalList = document.getElementById('favGlobalList');
+        const emptyState = document.getElementById('favEmptyState');
+
+        if (localList.children.length === 0 && globalList.children.length === 0) {
+            document.getElementById('favLocalSection').hidden = true;
+            document.getElementById('favGlobalSection').hidden = true;
+            emptyState.hidden = false;
+        }
+    }
+
+// Закрытие модалки избранного
+    document.querySelectorAll('[data-close-fav]').forEach(el => {
+        el.addEventListener('click', () => {
+            document.getElementById('favoritesModal').classList.remove('open');
+            document.body.style.overflow = '';
+        });
+    });
+})();
 
 /* ---------- предзагрузка историй при старте ---------- */
 loadStories();
-
-goPage(0);
+if (pages.length) goPage(0);

@@ -20,7 +20,7 @@ class PlaceApprovedMail extends Mailable
     public function build()
     {
         return $this
-            ->subject('🎉 Ваше заведение опубликовано на ВИЗИТ ДОНЕЦК')
+            ->subject('🎉 Ваше заведение опубликовано')
             ->view('emails.place-approved');
     }
 }

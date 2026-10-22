@@ -3,7 +3,7 @@
         <div class="s-head reveal">
             <div class="kicker">07 · Редакционные подборки</div>
             <h2>Куда пойти?</h2>
-            <p class="s-sub">Городской журнал ВИЗИТ ДОНЕЦК советует.</p>
+            <p class="s-sub">Городской журнал КОД НОВОРОССИИ советует.</p>
         </div>
         <div class="ed-grid">
             @foreach($posts as $i => $post)

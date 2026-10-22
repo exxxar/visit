@@ -20,8 +20,8 @@ class FeedbackReplyMail extends Mailable implements ShouldQueue
     public function build()
     {
         return $this
-            ->subject('Re: ' . $this->feedback->subjectLabel() . ' — ВИЗИТ ДОНЕЦК')
-            ->replyTo(config('services.mail.admin'), 'ВИЗИТ ДОНЕЦК')
+            ->subject('Re: ' . $this->feedback->subjectLabel() . ' — КОД НОВОРОССИИ')
+            ->replyTo(config('services.mail.admin'), 'КОД НОВОРОССИИ')
             ->view('emails.feedback-reply');
     }
 }

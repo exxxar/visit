@@ -1,0 +1,1 @@
+details summary[data-v-0d5088be]::-webkit-details-marker{display:none}details[open] summary[data-v-0d5088be]{color:var(--lime)!important}details[open] summary[data-v-0d5088be]:before{content:"▼ "}details:not([open]) summary[data-v-0d5088be]:before{content:"▶ "}

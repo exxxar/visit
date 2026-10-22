@@ -36,6 +36,9 @@ class RegisterController extends Controller
 
         $user->assignRole('business');
 
+        // привязываем pending-приглашения
+        \App\Http\Controllers\ReferralController::bindPendingInvites($user);
+
         Auth::login($user);
         $request->session()->regenerate();
 

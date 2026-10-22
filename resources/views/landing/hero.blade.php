@@ -3,7 +3,7 @@
     <div class="wrap hero-grid">
         <div class="hero-copy">
             <div class="kicker reveal">Городской digital-гид · {{ now()->year }}</div>
-            <h1 class="hero-logo reveal">ВИЗИТ<span class="grad">ДОНЕЦК</span></h1>
+            <h1 class="hero-logo reveal">КОД<span class="grad">НОВОРОССИИ</span></h1>
             <p class="hero-sub reveal">{{ $settings['hero']['sub'] ?? 'Главный путеводитель по заведениям, услугам и отдыху города' }}</p>
             <p class="hero-add reveal">{{ $settings['hero']['add'] ?? 'Все лучшие места Донецка — в одном путеводителе.' }}</p>
 

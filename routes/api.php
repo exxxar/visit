@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AiChatController;
 use App\Http\Controllers\Api\ApplicationController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DistrictController;
@@ -7,12 +8,14 @@ use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\LeadController;
+use App\Http\Controllers\Api\MapDataController;
 use App\Http\Controllers\Api\PlaceController;
 use App\Http\Controllers\Api\PlaceMenuController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\StoryController;
 use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\OutboundLinkController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -20,10 +23,15 @@ Route::prefix('v1')->group(function () {
     Route::post('feedback', [FeedbackController::class, 'store'])
         ->middleware('throttle:5,1'); // 5 запросов в минуту с IP
 
+    Route::get('/map-data', [MapDataController::class, '__invoke']);
+
+    Route::post('/ai-chat', [AiChatController::class, 'chat']);
     // справочники
     Route::get('districts', [DistrictController::class, 'index']);
     Route::get('categories', [CategoryController::class, 'index']);
 
+    Route::post('/out', [OutboundLinkController::class, 'track'])
+        ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
     // заведения
     Route::get('places', [PlaceController::class, 'index']);
     Route::get('places/{slug}', [PlaceController::class, 'show']);

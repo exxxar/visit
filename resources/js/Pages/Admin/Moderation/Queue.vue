@@ -16,11 +16,14 @@ const TABS = [
     ['reviews', 'Отзывы'], ['applications', 'Заявки'],
 ]
 
-const title = (i) => i.name ?? i.title ?? i.org_name
+const title = (i) => {
+    if (props.tab === 'reviews') return i.place?.name ?? 'Неизвестное место'
+    return i.name ?? i.title ?? i.org_name
+}
 
 const sub = (i) => {
     if (props.tab === 'places') return `${i.category?.name} · ${i.district?.name}`
-    if (props.tab === 'reviews') return `${i.place?.name} · ★${i.rating}`
+    if (props.tab === 'reviews') return `Автор: ${i.user?.name ?? 'Аноним'} · ★${i.rating}`
     if (props.tab === 'applications') {
         const parts = []
         if (i.contact_name) parts.push(i.contact_name)
@@ -31,10 +34,8 @@ const sub = (i) => {
     return i.place?.name ?? ''
 }
 
-/* источник заявки */
 const isMypwa = (i) => i.external_source === 'mypwa.ru'
 
-/* обложка для превью */
 const cover = (i) => {
     if (props.tab === 'places' && i.cover_url) return '/' + i.cover_url
     if (props.tab === 'news' && i.cover) return i.cover
@@ -43,13 +44,11 @@ const cover = (i) => {
     return null
 }
 
-/* ссылка на Яндекс.Карты для заявок с координатами */
 const yandexUrl = (i) => {
     if (!i.lat || !i.lng) return null
     return `https://yandex.ru/maps/?ll=${i.lng},${i.lat}&z=17&text=${encodeURIComponent(i.address || '')}`
 }
 
-/* импорт с mypwa */
 const importing = ref(false)
 const importMypwa = () => {
     if (!confirm('Загрузить новые заведения с mypwa.ru?')) return
@@ -60,21 +59,18 @@ const importMypwa = () => {
     })
 }
 
-/* дни в очереди */
 const daysInQueue = (i) => {
     const created = new Date(i.created_at)
     const diff = Math.floor((Date.now() - created.getTime()) / 86400000)
     return diff
 }
 
-/* форматирование часов работы */
 const DAYS_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const formatHours = (hours) => {
     if (!hours || !Array.isArray(hours)) return null
     return hours.map(h => `${h.d}: ${h.from}–${h.to}`).join(', ')
 }
 
-/* детали заявки в модалке */
 const detailsModal = ref(null)
 const openDetails = (i) => { detailsModal.value = i }
 const closeDetails = () => { detailsModal.value = null }
@@ -109,12 +105,10 @@ const closeDetails = () => { detailsModal.value = null }
         </div>
 
         <div v-for="i in items.data" :key="i.id" class="vcard mrow">
-            <!-- Превью (обложка) -->
             <div v-if="cover(i)" class="mrow__cover">
                 <img v-lazy="cover(i)" :alt="title(i)">
             </div>
 
-            <!-- Основная информация -->
             <div class="mrow__main">
                 <div class="mrow__head">
                     <b>{{ title(i) }}</b>
@@ -131,11 +125,10 @@ const closeDetails = () => { detailsModal.value = null }
                     <span v-for="s in 5" :key="s" :class="{ on: s <= i.rating }">★</span>
                 </div>
 
-                <!-- Текст отзыва / описания заявки -->
-                <p v-if="tab === 'reviews' && i.text" class="mrow__text">{{ i.text }}</p>
+                <!-- ИСПРАВЛЕНО: Текст отзыва теперь берётся из i.content -->
+                <p v-if="tab === 'reviews' && i.content" class="mrow__text">{{ i.content }}</p>
                 <p v-if="tab === 'applications' && i.description" class="mrow__text">{{ i.description }}</p>
 
-                <!-- Координаты для заявок -->
                 <div v-if="tab === 'applications' && i.lat && i.lng" class="mrow__coords">
                     📍 {{ Number(i.lat).toFixed(4) }}, {{ Number(i.lng).toFixed(4) }}
                     <a v-if="yandexUrl(i)" :href="yandexUrl(i)" target="_blank" rel="nofollow noopener" class="tlink">
@@ -143,13 +136,11 @@ const closeDetails = () => { detailsModal.value = null }
                     </a>
                 </div>
 
-                <!-- Часы работы для заявок -->
                 <div v-if="tab === 'applications' && i.working_hours?.length" class="mrow__hours">
                     🕒 {{ formatHours(i.working_hours.slice(0, 3)) }}
                     <span v-if="i.working_hours.length > 3" class="mut"> +ещё {{ i.working_hours.length - 3 }}</span>
                 </div>
 
-                <!-- Бейджи статуса -->
                 <div class="mrow__badges">
                     <VBadge v-if="tab === 'applications'" v-bind="badge(L.application, i.status)" />
                     <VBadge v-else-if="tab === 'reviews'" v-bind="badge(L.review, i.status)" />
@@ -157,9 +148,14 @@ const closeDetails = () => { detailsModal.value = null }
                 </div>
             </div>
 
-            <!-- Действия -->
             <div class="mrow__act">
-                <template v-if="tab === 'applications' ? !i.place_id : i.status !== 'approved'">
+                <!-- ИСПРАВЛЕНО: Для отзывов оставляем только "Одобрить" и "Отклонить" -->
+                <template v-if="tab === 'reviews'">
+                    <VButton size="sm" :busy="processing" @click="approve('reviews', i.id)">✓ Одобрить</VButton>
+                    <VButton size="sm" variant="danger" @click="openModal(i, 'reviews', 'reject')">✕ Отклонить</VButton>
+                </template>
+
+                <template v-else-if="tab === 'applications' ? !i.place_id : i.status !== 'approved'">
                     <VButton v-if="tab === 'applications'" size="sm" variant="ghost" @click="openDetails(i)">👁 Детали</VButton>
                     <VButton size="sm" :busy="processing" @click="approve(tab, i.id)">✓ Одобрить</VButton>
                     <VButton size="sm" variant="ghost" @click="openModal(i, tab, 'return')">↩ На правки</VButton>
@@ -169,7 +165,6 @@ const closeDetails = () => { detailsModal.value = null }
                     <Link v-if="tab === 'applications'" :href="`/place/${i.place?.slug ?? i.place_id}`" class="tlink">
                         ✓ Заведение опубликовано
                     </Link>
-
                     <span v-else class="tlink" style="color:var(--lime)">✓ Опубликовано</span>
                 </template>
             </div>
@@ -183,19 +178,21 @@ const closeDetails = () => { detailsModal.value = null }
         <!-- Модалка решения -->
         <VModal
             :show="!!modal"
-            :title="modal?.action === 'reject' ? 'Отклонить' : 'Вернуть на правки'"
+            :title="modal?.action === 'reject' ? 'Отклонить отзыв' : 'Вернуть на правки'"
             @close="closeModal"
         >
-            <p style="margin-top:0;color:var(--mut)">{{ modal?.title }}</p>
-            <label class="lbl">Комментарий для владельца</label>
-            <textarea v-model="comment" class="inp" rows="4" placeholder="Что нужно исправить…"></textarea>
+            <p style="margin-top:0;color:var(--mut)">
+                {{ modal?.title }}
+            </p>
+            <label class="lbl">Комментарий для автора (причина отклонения)</label>
+            <textarea v-model="comment" class="inp" rows="4" placeholder="Например: Содержит нецензурную лексику или недостоверную информацию..."></textarea>
             <div style="display:flex;gap:10px;margin-top:16px">
                 <VButton :busy="processing" @click="submitModal">Сохранить решение</VButton>
                 <VButton variant="ghost" @click="closeModal">Отмена</VButton>
             </div>
         </VModal>
 
-        <!-- Модалка деталей заявки -->
+        <!-- Модалка деталей заявки (без изменений) -->
         <VModal v-if="detailsModal" :show="true" :title="'Заявка: ' + detailsModal.org_name" @close="closeDetails">
             <div class="det-grid">
                 <div class="det-row"><span>Контактное лицо</span><b>{{ detailsModal.contact_name || '—' }}</b></div>
@@ -242,32 +239,25 @@ const closeDetails = () => { detailsModal.value = null }
 </template>
 
 <style scoped>
+/* Твои стили остаются без изменений, они отличные */
 .mrow{display:flex;gap:16px;align-items:flex-start;margin-bottom:12px;padding:16px 20px;flex-wrap:wrap}
 .mrow__cover{width:90px;height:90px;flex-shrink:0;border-radius:14px;overflow:hidden;background:var(--panel);border:1px solid var(--line)}
 .mrow__cover img{width:100%;height:100%;object-fit:cover}
-
 .mrow__main{flex:1;min-width:260px}
 .mrow__head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .mrow__head b{font-size:15px}
 .mrow__sub{color:var(--mut);font-size:13px;display:block;margin-bottom:6px}
 .mrow__wait{font-size:11px;color:var(--orange);font-weight:700;padding:2px 8px;background:rgba(255,138,60,.12);border-radius:6px}
-
 .mrow__rate{display:flex;gap:2px;margin:6px 0;color:#3a3f52;font-size:14px}
 .mrow__rate .on{color:#facc15}
-
 .mrow__text{color:var(--mut);font-size:13px;margin:6px 0;line-height:1.5;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-
 .mrow__coords{font-size:12.5px;color:var(--mut);margin:6px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .mrow__coords .tlink{font-size:12px}
-
 .mrow__hours{font-size:12.5px;color:var(--mut);margin:4px 0}
 .mrow__hours .mut{color:var(--mut);font-size:11px;opacity:.7}
-
 .mrow__badges{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
-
 .mrow__act{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-
 .vbadge--mypwa{
     background:rgba(34,211,238,.15);
     color:#22d3ee;
@@ -277,8 +267,6 @@ const closeDetails = () => { detailsModal.value = null }
     font-weight:700;
     border:1px solid rgba(34,211,238,.3);
 }
-
-/* модалка деталей заявки */
 .det-grid{display:grid;grid-template-columns:130px 1fr;gap:10px 16px;font-size:14px}
 .det-row{display:flex;flex-direction:column;gap:2px}
 .det-row span{color:var(--mut);font-size:12px}
@@ -287,7 +275,6 @@ const closeDetails = () => { detailsModal.value = null }
 .det-hour{background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:8px;font-size:13px;
     display:flex;justify-content:space-between;gap:8px}
 .det-hour b{color:var(--cyan);font-weight:700}
-
 @media(max-width:640px){
     .mrow__cover{width:70px;height:70px}
     .det-grid{grid-template-columns:1fr}
