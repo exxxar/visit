@@ -101,6 +101,31 @@
         <button id="pwa-update-btn" class="btn btn-grad btn-sm">Обновить</button>
     </div>
 </div>
+
+{{-- Затемнение для панели ИИ --}}
+<div class="ai-backdrop" id="aiBackdrop"></div>
+
+{{-- Боковая панель ИИ-помощника --}}
+<aside class="ai-panel" id="aiPanel">
+    <div class="ai-panel__header">
+        <div>
+            <div class="ai-panel__kicker">ИИ-помощник</div>
+            <h3 class="ai-panel__title" id="aiPanelTitle">Подборка для вас</h3>
+        </div>
+        <button class="ai-panel__close" id="closeAiPanel">✕</button>
+    </div>
+
+    <div class="ai-panel__messages" id="aiMessages">
+        {{-- Приветствие появится здесь динамически --}}
+    </div>
+
+    <form class="ai-panel__input" id="aiForm">
+        <input type="text" id="aiInput" class="ai-input" placeholder="Уточните запрос..." autocomplete="off">
+        <button type="submit" class="ai-send-btn" id="aiSendBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+    </form>
+</aside>
 </body>
 </html>
 

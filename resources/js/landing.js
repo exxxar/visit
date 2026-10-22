@@ -1549,51 +1549,184 @@ function escapeAttr(str) { return escapeHtml(str); }
     });
 
     /* ==========================================================================
-   ЛОГИКА КАРТОЧЕК НАСТРОЕНИЯ (MOODS)
+   ЛОГИКА КАРТОЧЕК НАСТРОЕНИЯ (MOODS) + ИИ-ПОМОЩНИК
    ========================================================================== */
+
+// Ссылки на элементы панели ИИ
+    const aiPanel = document.getElementById('aiPanel');
+    const aiBackdrop = document.getElementById('aiBackdrop');
+    const aiPanelTitle = document.getElementById('aiPanelTitle');
+    const aiMessages = document.getElementById('aiMessages');
+    const aiForm = document.getElementById('aiForm');
+    const aiInput = document.getElementById('aiInput');
+    const aiSendBtn = document.getElementById('aiSendBtn');
+    const closeAiPanel = document.getElementById('closeAiPanel');
+
+    let aiChatHistory = [];
+
+// 1. Открытие/закрытие панели ИИ
+    function toggleAiPanel(isOpen) {
+        if (!aiPanel) return;
+        if (isOpen) {
+            aiPanel.classList.add('is-open');
+            aiBackdrop.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => aiInput?.focus(), 350);
+        } else {
+            aiPanel.classList.remove('is-open');
+            aiBackdrop.classList.remove('is-open');
+            document.body.style.overflow = '';
+        }
+    }
+
+    if (closeAiPanel) closeAiPanel.addEventListener('click', () => toggleAiPanel(false));
+    if (aiBackdrop) aiBackdrop.addEventListener('click', () => toggleAiPanel(false));
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && aiPanel?.classList.contains('is-open')) {
+            toggleAiPanel(false);
+        }
+    });
+
+// 2. Обработчики карточек настроения
     $$('.m-card').forEach(card => {
         card.addEventListener('click', () => {
             const mood = card.dataset.mood;
             const msg = card.dataset.msg;
+            const title = card.querySelector('h3')?.textContent || 'Подборка';
 
             if (!mood) return;
 
-            // 1. Плавный скролл к секции с картой
-            const mapEl = $('#map');
-            if (mapEl) {
-                mapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            // Открываем панель ИИ
+            toggleAiPanel(true);
 
-            // 2. Обновляем логику фильтров карты (используем существующие переменные)
-            if (typeof activeLayerSlugs !== 'undefined' && typeof renderMapObjects === 'function') {
-                // Сбрасываем текущие фильтры
-                activeLayerSlugs.clear();
-                // Добавляем выбранное настроение (оно совпадает со slug слоя в админке)
-                activeLayerSlugs.add(mood);
+            // Сбрасываем предыдущий диалог
+            aiMessages.innerHTML = '';
+            aiChatHistory = [];
+            aiPanelTitle.textContent = title;
 
-                // Обновляем визуальное состояние кнопок-фильтров над картой
-                const filterContainer = $('#mapFilters');
-                if (filterContainer) {
-                    filterContainer.querySelectorAll('.chip').forEach(btn => {
-                        if (btn.dataset.layer === 'all') {
-                            btn.classList.remove('on');
-                        }
-                        if (btn.dataset.layer === mood) {
-                            btn.classList.add('on');
-                        } else {
-                            btn.classList.remove('on');
-                        }
-                    });
-                }
+            // Добавляем приветственное сообщение бота
+            appendAiMessage('bot', `Отличный выбор! Подбираю для вас лучшие места...`);
 
-                // Перерисовываем маркеры на карте и схеме
-                renderMapObjects();
-            }
+            // Формируем умный промпт для ИИ
+            const prompt = buildMoodPrompt(mood, msg);
 
-            // 3. Показываем уведомление пользователю
-            toast(msg || `Показываем категорию: ${mood}`);
+            // Автоматически отправляем запрос к ИИ
+            sendAiRequest(prompt);
         });
     });
+
+// 3. Формирование промпта на основе настроения
+    function buildMoodPrompt(mood, msg) {
+        const prompts = {
+            bars: `Пользователь хочет провести вечер в городе. ${msg}. Посоветуй 3-5 лучших баров, ресторанов или клубов из базы данных. Укажи название, район и коротко опиши атмосферу.`,
+            coffee: `Пользователь ищет место для медленного утра. ${msg}. Посоветуй 3-5 лучших кофеен или пекарен из базы данных. Укажи название, район и что там стоит попробовать.`,
+            food: `Пользователь хочет вкусно поесть. ${msg}. Посоветуй 3-5 лучших ресторанов или гастробаров из базы данных. Укажи название, район и фирменные блюда.`,
+            beauty: `Пользователь хочет уделить время себе. ${msg}. Посоветуй 3-5 лучших SPA, салонов красоты или мест для релакса из базы данных. Укажи название и район.`,
+            leisure: `Пользователь ищет, куда пойти развлечься. ${msg}. Посоветуй 3-5 мест для отдыха и развлечений из базы данных. Укажи название и район.`,
+            auto: `Пользователю нужен уход за автомобилем. ${msg}. Посоветуй 3-5 лучших автосервисов, моек или детейлингов из базы данных. Укажи название и район.`,
+        };
+
+        return prompts[mood] || `Пользователь выбрал категорию: ${mood}. ${msg}. Посоветуй лучшие места из базы данных.`;
+    }
+
+// 4. Отправка запроса к ИИ
+    async function sendAiRequest(message) {
+        if (!message) return;
+
+        // Добавляем сообщение пользователя в историю
+        aiChatHistory.push({ role: 'user', content: message });
+        aiSendBtn.disabled = true;
+
+        // Показываем индикатор набора
+        const typingId = showAiTyping();
+
+        try {
+            const response = await fetch('/api/v1/ai-chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: message,
+                    history: aiChatHistory.slice(-6) // Последние 6 сообщений для контекста
+                })
+            });
+
+            const data = await response.json();
+            removeAiTyping(typingId);
+
+            if (data.success) {
+                appendAiMessage('bot', data.message);
+                aiChatHistory.push({ role: 'assistant', content: data.message });
+            } else {
+                appendAiMessage('bot', '⚠️ ' + (data.message || 'Не удалось получить ответ. Попробуйте позже.'));
+            }
+        } catch (error) {
+            console.error('AI Chat Error:', error);
+            removeAiTyping(typingId);
+            appendAiMessage('bot', '⚠️ Ошибка сети. Проверьте подключение к интернету.');
+        } finally {
+            aiSendBtn.disabled = false;
+            aiInput?.focus();
+        }
+    }
+
+// 5. Обработка отправки формы (ручной ввод)
+    if (aiForm) {
+        aiForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = aiInput.value.trim();
+            if (!message) return;
+
+            appendAiMessage('user', message);
+            aiInput.value = '';
+            sendAiRequest(message);
+        });
+    }
+
+// 6. Вспомогательные функции для рендера сообщений
+    function appendAiMessage(role, text) {
+        if (!aiMessages) return;
+
+        const div = document.createElement('div');
+        div.className = `ai-message ai-message--${role}`;
+
+        // Защита от XSS + поддержка переносов строк
+        const safeText = text
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\n/g, '<br>');
+
+        div.innerHTML = `
+        <div class="ai-message__ico">${role === 'user' ? '👤' : '🤖'}</div>
+        <div class="ai-message__text">${safeText}</div>
+    `;
+
+        aiMessages.appendChild(div);
+        aiMessages.scrollTop = aiMessages.scrollHeight;
+    }
+
+    function showAiTyping() {
+        if (!aiMessages) return null;
+        const id = 'ai-typing-' + Date.now();
+        const div = document.createElement('div');
+        div.id = id;
+        div.className = 'ai-message ai-message--bot';
+        div.innerHTML = `
+        <div class="ai-message__ico">🤖</div>
+        <div class="ai-message__text ai-typing"><span></span><span></span><span></span></div>
+    `;
+        aiMessages.appendChild(div);
+        aiMessages.scrollTop = aiMessages.scrollHeight;
+        return id;
+    }
+
+    function removeAiTyping(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    }
 
 })();
 
