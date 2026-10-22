@@ -96,22 +96,24 @@
             document.querySelectorAll('.d-area').forEach(area => {
                 area.style.cursor = 'pointer';
                 area.addEventListener('click', () => {
-                    const districtName = area.dataset.d;
-                    if (districtName) {
-                        window.location.href = `/places?districts[]=${encodeURIComponent(districtName)}`;
+                    // ✅ ИСПРАВЛЕНО: берем slug вместо имени для URL
+                    const districtSlug = area.dataset.slug;
+                    if (districtSlug) {
+                        window.location.href = `/places?districts[]=${encodeURIComponent(districtSlug)}`;
                     }
                 });
 
-                // Tooltip при наведении
+                // Tooltip при наведении (здесь оставляем русское имя для красоты)
                 area.addEventListener('mouseenter', (e) => {
+                    const districtName = area.dataset.d;
                     const tip = document.getElementById('dTip');
                     if (tip) {
                         const rect = area.getBoundingClientRect();
                         const mapRect = document.getElementById('distMapWrap').getBoundingClientRect();
                         tip.innerHTML = `
-                    <h4>${districtName}</h4>
-                    <div class="dn">${area.style.getPropertyValue('--dc')}</div>
-                `;
+                            <h4>${districtName}</h4>
+                            <div class="dn">${area.style.getPropertyValue('--dc')}</div>
+                        `;
                         tip.style.left = (rect.left - mapRect.left + rect.width / 2) + 'px';
                         tip.style.top = (rect.top - mapRect.top) + 'px';
                         tip.classList.add('show');

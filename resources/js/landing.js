@@ -682,7 +682,6 @@ $$('.d-area').forEach(area => {
     });
 });
 
-// 2. Рендер и обработка кликов по карточкам районов в сетке (#distGrid)
 function renderDistrictGrid() {
     const grid = $('#distGrid');
     if (!grid) return;
@@ -707,7 +706,7 @@ function renderDistrictGrid() {
             const placesCount = d.stats?.places || 0;
             const topCats = (d.stats?.cats || []).slice(0, 3);
 
-            // <-- ИЗМЕНЕНО: используем d.slug для формирования ссылки
+            // ✅ ИСПРАВЛЕНО: используем d.slug для ссылки
             const districtSlug = d.slug || d.name;
 
             return `
