@@ -23,53 +23,43 @@ if ('serviceWorker' in navigator) {
         });
     }
 }
-
 /* ==========================================================================
-       PWA INSTALLATION LOGIC
-       ========================================================================== */
+   PWA INSTALLATION LOGIC
+   ========================================================================== */
 let deferredPrompt = null;
 const installBtn = document.getElementById('pwaInstallBtn');
 
-// 1. Слушаем событие готовности к установке
 window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault(); // Предотвращаем стандартный баннер Chrome
-    deferredPrompt = e; // Сохраняем событие для последующего вызова
+    e.preventDefault();
+    deferredPrompt = e;
 
     console.log('✅ PWA: Событие beforeinstallprompt перехвачено.');
 
-    // Показываем кнопку, если она есть в DOM
     if (installBtn) {
         installBtn.style.display = 'inline-flex';
-        console.log('✅ PWA: Кнопка установки отображена.');
-    } else {
-        console.warn('⚠️ PWA: Кнопка #pwaInstallBtn не найдена в HTML!');
+        console.log('✅ PWA: Кнопка установки отображена в хедере.');
     }
 });
 
-// 2. Обработка клика по кнопке (без DOMContentLoaded, так как элементы уже загружены)
 if (installBtn) {
     installBtn.addEventListener('click', async () => {
         if (!deferredPrompt) {
-            console.warn('⚠️ PWA: Промпт недоступен (возможно, приложение уже установлено).');
+            console.warn('⚠️ PWA: Промпт недоступен.');
             installBtn.style.display = 'none';
             return;
         }
 
-        // Показываем нативный диалог установки
         deferredPrompt.prompt();
         console.log('🚀 PWA: Вызов prompt() выполнен.');
 
-        // Ждем реакции пользователя (accepted или dismissed)
         const { outcome } = await deferredPrompt.userChoice;
         console.log(`👤 PWA: Выбор пользователя: ${outcome}`);
 
-        // Очищаем переменную и скрываем кнопку (промт можно вызвать только 1 раз!)
         deferredPrompt = null;
         installBtn.style.display = 'none';
     });
 }
 
-// 3. Событие успешной установки (скрывает кнопку, если пользователь установил через меню браузера)
 window.addEventListener('appinstalled', () => {
     console.log('🎉 PWA: Приложение успешно установлено!');
     if (installBtn) installBtn.style.display = 'none';
