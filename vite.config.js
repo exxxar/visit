@@ -25,29 +25,26 @@ export default defineConfig({
             },
         }),
         VitePWA({
-            registerType: 'prompt',
+            registerType: 'autoUpdate', // ← ВАЖНО: меняем с 'prompt' на 'autoUpdate'
             injectRegister: 'auto',
             includeAssets: ['favicon.png', 'apple-touch-icon.png', 'masked-icon.svg'],
             manifest: {
-                id: '/', // ✅ ИСПРАВЛЕНИЕ 5: Явный ID приложения
+                id: '/',
                 name: 'КОД НОВОРОССИИ',
                 short_name: 'КОД НОВОРОССИИ',
                 description: 'Главный путеводитель по городу',
                 theme_color: '#05070d',
                 background_color: '#05070d',
                 display: 'standalone',
-                display_override: ['standalone', 'window-controls-overlay'], // ✅ ИСПРАВЛЕНИЕ 8 (Опционально)
                 orientation: 'portrait',
                 scope: '/',
                 start_url: '/',
-
-                // ✅ ИСПРАВЛЕНИЕ 3 и 4: Разделяем purpose и используем правильные размеры
                 icons: [
                     {
                         src: '/icon-192x192.png',
                         sizes: '192x192',
                         type: 'image/png',
-                        purpose: 'any' // Убрали 'maskable', если иконка не имеет специальных безопасных полей
+                        purpose: 'any'
                     },
                     {
                         src: '/icon-512x512.png',
@@ -56,26 +53,46 @@ export default defineConfig({
                         purpose: 'any'
                     }
                 ],
-
-                // ✅ ИСПРАВЛЕНИЕ 1 и 2: Добавляем скриншоты для десктопа и мобильных
                 screenshots: [
                     {
-                        src: '/screenshots/mobile.png', // <-- ТЫ ДОЛЖЕН СОЗДАТЬ ЭТОТ ФАЙЛ
-                        sizes: '540x720',               // <-- УКАЖИ РЕАЛЬНЫЕ РАЗМЕРЫ ЭТОЙ КАРТИНКИ
+                        src: '/screenshots/mobile.png',
+                        sizes: '540x720',
                         type: 'image/png',
-                        form_factor: 'narrow'           // Для мобильных
+                        form_factor: 'narrow'
                     },
                     {
-                        src: '/screenshots/desktop.png', // <-- ТЫ ДОЛЖЕН СОЗДАТЬ ЭТОТ ФАЙЛ
-                        sizes: '1920x1080',               // <-- УКАЖИ РЕАЛЬНЫЕ РАЗМЕРЫ ЭТОЙ КАРТИНКИ
+                        src: '/screenshots/desktop.png',
+                        sizes: '1280x720',
                         type: 'image/png',
-                        form_factor: 'wide'              // Для компьютеров
+                        form_factor: 'wide'
                     }
                 ]
             },
             workbox: {
+                // Кэшируем только статику, НЕ html
                 globPatterns: ['**/*.{js,css,ico,png,svg,webp,jpg,jpeg,woff,woff2}'],
+
+                // Что показывать, если пользователь офлайн и запрашивает страницу
+                navigateFallback: '/offline.html',
+
+                // Разрешаем навигационные fallback для всех путей
+                navigateFallbackAllowlist: [/^(?!.*\/api\/).*/],
+
                 runtimeCaching: [
+                    // 1. Навигация (HTML-страницы) — всегда сначала сеть, потом кэш
+                    {
+                        urlPattern: ({ request }) => request.mode === 'navigate',
+                        handler: 'NetworkFirst',
+                        options: {
+                            cacheName: 'pages-cache',
+                            networkTimeoutSeconds: 3,
+                            expiration: {
+                                maxEntries: 50,
+                                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 дней
+                            }
+                        }
+                    },
+                    // 2. Шрифты Google
                     {
                         urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
                         handler: 'CacheFirst',
@@ -83,6 +100,15 @@ export default defineConfig({
                             cacheName: 'google-fonts-cache',
                             expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
                             cacheableResponse: { statuses: [0, 200] }
+                        }
+                    },
+                    // 3. Изображения со сторонних ресурсов
+                    {
+                        urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+                        handler: 'StaleWhileRevalidate',
+                        options: {
+                            cacheName: 'images-cache',
+                            expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 7 }
                         }
                     }
                 ]

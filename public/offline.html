@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Нет соединения — КОД НОВОРОССИИ</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #05070d;
+            color: #eef1fb;
+            font-family: system-ui, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .offline-box {
+            max-width: 400px;
+        }
+        .offline-box h1 {
+            font-size: 48px;
+            margin: 0 0 16px;
+        }
+        .offline-box p {
+            color: #9aa3bd;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 0 0 24px;
+        }
+        .offline-box button {
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #22d3ee, #8b5cf6);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .offline-box button:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+<div class="offline-box">
+    <h1>📡</h1>
+    <p>Похоже, вы offline.<br>Проверьте подключение к интернету и попробуйте снова.</p>
+    <button onclick="location.reload()">Попробовать снова</button>
+</div>
+</body>
+</html>
