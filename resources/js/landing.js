@@ -174,8 +174,9 @@ function renderLayerFilters() {
 
 // 3. Рендер объектов на карте (и схема, и реальная)
 function renderMapObjects() {
-    // Очищаем старую схему
-    if (world) world.innerHTML = '';
+    if (world) {
+        world.querySelectorAll('.pin, .cluster').forEach(el => el.remove());
+    }
 
     // Очищаем старую реальную карту
     if (realMap) {
