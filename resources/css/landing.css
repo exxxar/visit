@@ -7459,3 +7459,31 @@ img{
         font-size: 13px;
     }
 }
+
+/* Уменьшение заголовка на планшетах */
+@media (max-width: 860px) {
+    .hero-logo {
+        font-size: clamp(32px, 8vw, 56px);
+        margin: 14px 0 18px;
+    }
+}
+
+/* Уменьшение заголовка на мобильных */
+@media (max-width: 620px) {
+    .hero-logo {
+        font-size: clamp(28px, 10vw, 42px);
+        margin: 12px 0 16px;
+        letter-spacing: 0;
+    }
+
+    .hero-logo span {
+        display: inline; /* "НОВОРОССИИ" на той же строке, если нужно */
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 380px) {
+    .hero-logo {
+        font-size: 26px;
+    }
+}
