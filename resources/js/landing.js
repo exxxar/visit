@@ -1497,59 +1497,53 @@ function escapeAttr(str) { return escapeHtml(str); }
     });
 
     /* ==========================================================================
-    PWA INSTALLATION LOGIC
-    ========================================================================== */
+       PWA INSTALLATION LOGIC
+       ========================================================================== */
     let deferredPrompt = null;
+    const installBtn = document.getElementById('pwaInstallBtn');
 
+    // 1. Слушаем событие готовности к установке
     window.addEventListener('beforeinstallprompt', (e) => {
-        // 1. Предотвращаем стандартное поведение (чтобы браузер не показывал свое уродливое окно)
-        e.preventDefault();
-        // 2. Сохраняем событие
-        deferredPrompt = e;
+        e.preventDefault(); // Предотвращаем стандартный баннер Chrome
+        deferredPrompt = e; // Сохраняем событие для последующего вызова
 
-        console.log('✅ PWA: Событие beforeinstallprompt перехвачено. Ждем клика на кнопку.');
+        console.log('✅ PWA: Событие beforeinstallprompt перехвачено.');
 
-        // 3. Ищем кнопку и показываем её
-        const installBtn = document.getElementById('pwaInstallBtn');
+        // Показываем кнопку, если она есть в DOM
         if (installBtn) {
             installBtn.style.display = 'inline-flex';
             console.log('✅ PWA: Кнопка установки отображена.');
         } else {
-            console.warn('⚠️ PWA: Кнопка #pwaInstallBtn не найдена в HTML! Установка невозможна.');
+            console.warn('⚠️ PWA: Кнопка #pwaInstallBtn не найдена в HTML!');
         }
     });
 
-// Обработчик клика (вешаем через делегирование или после загрузки DOM)
-    document.addEventListener('DOMContentLoaded', () => {
-        const installBtn = document.getElementById('pwaInstallBtn');
-
-        if (installBtn) {
-            installBtn.addEventListener('click', async () => {
-                if (!deferredPrompt) {
-                    console.warn('⚠️ PWA: Событие установки недоступно (возможно, уже установлено).');
-                    installBtn.style.display = 'none';
-                    return;
-                }
-
-                // 1. Показываем нативный промпт браузера
-                deferredPrompt.prompt();
-                console.log('🚀 PWA: Вызов prompt() выполнен.');
-
-                // 2. Ждем выбора пользователя
-                const { outcome } = await deferredPrompt.userChoice;
-                console.log(`👤 PWA: Выбор пользователя: ${outcome}`);
-
-                // 3. Очищаем переменную (промпт можно вызвать только 1 раз)
-                deferredPrompt = null;
+    // 2. Обработка клика по кнопке (без DOMContentLoaded, так как элементы уже загружены)
+    if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) {
+                console.warn('⚠️ PWA: Промпт недоступен (возможно, приложение уже установлено).');
                 installBtn.style.display = 'none';
-            });
-        }
-    });
+                return;
+            }
 
-// Событие успешной установки
+            // Показываем нативный диалог установки
+            deferredPrompt.prompt();
+            console.log('🚀 PWA: Вызов prompt() выполнен.');
+
+            // Ждем реакции пользователя (accepted или dismissed)
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`👤 PWA: Выбор пользователя: ${outcome}`);
+
+            // Очищаем переменную и скрываем кнопку (промт можно вызвать только 1 раз!)
+            deferredPrompt = null;
+            installBtn.style.display = 'none';
+        });
+    }
+
+    // 3. Событие успешной установки (скрывает кнопку, если пользователь установил через меню браузера)
     window.addEventListener('appinstalled', () => {
         console.log('🎉 PWA: Приложение успешно установлено!');
-        const installBtn = document.getElementById('pwaInstallBtn');
         if (installBtn) installBtn.style.display = 'none';
         deferredPrompt = null;
     });
