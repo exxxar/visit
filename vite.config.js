@@ -25,14 +25,14 @@ export default defineConfig({
             },
         }),
         VitePWA({
-            registerType: 'prompt', // Ждем подтверждения пользователя для обновления
+            registerType: 'prompt',
             injectRegister: 'auto',
             includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
             manifest: {
-                name: 'КОД НОВОРОССИИ',
-                short_name: 'КОД НОВОРОССИИ',
+                name: 'ВИЗИТ ДОНЕЦК',
+                short_name: 'Визит ДНР',
                 description: 'Главный путеводитель по городу',
-                theme_color: '#05070d', // Твой --bg из CSS
+                theme_color: '#05070d',
                 background_color: '#05070d',
                 display: 'standalone',
                 orientation: 'portrait',
@@ -54,8 +54,8 @@ export default defineConfig({
                 ]
             },
             workbox: {
-                // Кэшируем все ассеты Vite (CSS, JS, шрифты, картинки)
-                globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg}'],
+                // !!! УБРАЛИ 'html' ОТСЮДА !!!
+                globPatterns: ['**/*.{js,css,ico,png,svg,webp,jpg,jpeg,woff,woff2}'],
                 runtimeCaching: [
                     {
                         urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -69,11 +69,10 @@ export default defineConfig({
                 ]
             },
             devOptions: {
-                enabled: false // Включи true только для локального тестирования PWA
+                enabled: false
             }
         })
     ],
-
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
