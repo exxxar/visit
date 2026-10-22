@@ -30,7 +30,7 @@ window.setMain = (img) => {
 };
 
 /* ==========================================================================
-   1. ИЗБРАННОЕ (С поддержкой локального сохранения для гостей)
+   1. ИЗБРАННОЕ (Сохраняем ПОЛНЫЙ объект места для автономной работы модалки)
    ========================================================================== */
 const favBtn = document.getElementById('favBtn');
 const LOCAL_FAV_KEY = 'vizit_local_favorites';
@@ -38,7 +38,14 @@ const LOCAL_FAV_KEY = 'vizit_local_favorites';
 // Вспомогательные функции для localStorage
 function getLocalFavs() {
     try {
-        return JSON.parse(localStorage.getItem(LOCAL_FAV_KEY) || '[]');
+        const raw = localStorage.getItem(LOCAL_FAV_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        // Миграция со старого формата (массив ID) на новый (массив объектов)
+        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'number') {
+            return parsed.map(id => ({ id, name: 'Заведение', slug: '', saved_at: new Date().toISOString() }));
+        }
+        return parsed;
     } catch {
         return [];
     }
@@ -47,7 +54,7 @@ function getLocalFavs() {
 function updateFavUI(isFav, isLocal = false) {
     const icon = document.getElementById('favIcon');
     const text = document.getElementById('favText');
-    if (!icon || !text) return;
+    if (!icon || !text || !favBtn) return;
 
     if (isFav) {
         favBtn.classList.add('is-favorite');
@@ -61,79 +68,101 @@ function updateFavUI(isFav, isLocal = false) {
 }
 
 if (favBtn) {
-    const placeId = window.PLACE_DATA.id;
-    const currentUserId = window.PLACE_DATA.currentUserId;
+    const placeId = window.PLACE_DATA?.id;
+    const currentUserId = window.PLACE_DATA?.currentUserId;
 
-    // 1. Проверка статуса при загрузке страницы
-    if (currentUserId) {
-        // Авторизован: проверяем через API
-        fetch(`/api/v1/places/${placeId}/favorite/check`, {
-            headers: { 'Accept': 'application/json' }
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.is_favorite) updateFavUI(true, false);
+    if (placeId) {
+        // 1. Проверка статуса при загрузке страницы
+        if (currentUserId) {
+            // Авторизован: проверяем через API
+            fetch(`/api/v1/places/${placeId}/favorite/check`, {
+                headers: { 'Accept': 'application/json' }
             })
-            .catch(console.error);
-    } else {
-        // Не авторизован: проверяем localStorage
-        const localFavs = getLocalFavs();
-        if (localFavs.includes(placeId)) {
-            updateFavUI(true, true);
-        }
-    }
-
-    // 2. Обработка клика по кнопке
-    favBtn.addEventListener('click', async () => {
-        if (!currentUserId) {
-            // Не авторизован
+                .then(r => r.json())
+                .then(data => {
+                    if (data.is_favorite) updateFavUI(true, false);
+                })
+                .catch(console.error);
+        } else {
+            // Не авторизован: проверяем localStorage (ищем по ID в массиве объектов)
             const localFavs = getLocalFavs();
-            if (localFavs.includes(placeId)) {
-                // Если уже сохранено локально -> удаляем
-                const updatedFavs = localFavs.filter(id => id !== placeId);
-                localStorage.setItem(LOCAL_FAV_KEY, JSON.stringify(updatedFavs));
-                updateFavUI(false, false);
-                showToast('Удалено из локального избранного');
-            } else {
-                // Если не сохранено -> открываем модалку выбора
-                document.getElementById('localFavModal').classList.add('open');
+            if (localFavs.some(f => f.id === placeId)) {
+                updateFavUI(true, true);
             }
-            return;
         }
 
-        // Авторизован -> стандартный API запрос
-        try {
-            const response = await fetch(`/api/v1/places/${placeId}/favorite`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Accept': 'application/json'
+        // 2. Обработка клика по кнопке
+        favBtn.addEventListener('click', async () => {
+            if (!currentUserId) {
+                // Не авторизован
+                const localFavs = getLocalFavs();
+                const isAlreadyLocal = localFavs.some(f => f.id === placeId);
+
+                if (isAlreadyLocal) {
+                    // Если уже сохранено локально -> удаляем
+                    const updatedFavs = localFavs.filter(f => f.id !== placeId);
+                    localStorage.setItem(LOCAL_FAV_KEY, JSON.stringify(updatedFavs));
+                    updateFavUI(false, false);
+                    showToast('Удалено из локального избранного');
+                } else {
+                    // Если не сохранено -> открываем модалку выбора
+                    const modal = document.getElementById('localFavModal');
+                    if (modal) modal.classList.add('open');
                 }
-            });
-            const data = await response.json();
-            if (data.success) {
-                updateFavUI(data.is_favorite, false);
-                showToast(data.is_favorite ? '❤️ Добавлено в избранное' : 'Удалено из избранного');
+                return;
             }
-        } catch (error) {
-            console.error('Favorite error:', error);
-            showToast('Ошибка сети');
-        }
-    });
+
+            // Авторизован -> стандартный API запрос
+            try {
+                const response = await fetch(`/api/v1/places/${placeId}/favorite`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    updateFavUI(data.is_favorite, false);
+                    showToast(data.is_favorite ? '❤️ Добавлено в избранное' : 'Удалено из избранного');
+                }
+            } catch (error) {
+                console.error('Favorite error:', error);
+                showToast('Ошибка сети');
+            }
+        });
+    }
 }
 
 // 3. Обработка кнопки "Сохранить локально" внутри модалки
 const saveLocalFavBtn = document.getElementById('saveLocalFavBtn');
 if (saveLocalFavBtn) {
     saveLocalFavBtn.addEventListener('click', () => {
-        const placeId = window.PLACE_DATA.id;
+        const pd = window.PLACE_DATA || {};
         const favs = getLocalFavs();
-        if (!favs.includes(placeId)) {
-            favs.push(placeId);
+
+        // Формируем полный объект места для сохранения
+        const placeObj = {
+            id: pd.id,
+            name: pd.name || 'Заведение',
+            slug: pd.slug || '',
+            cover_url: pd.cover_url || '/assets/placeholder.jpg',
+            category: pd.category || 'Место',
+            district: pd.district || '',
+            rating: pd.rating || 0,
+            saved_at: new Date().toISOString()
+        };
+
+        // Проверяем, нет ли уже такого места
+        if (!favs.some(f => f.id === placeObj.id)) {
+            favs.push(placeObj);
             localStorage.setItem(LOCAL_FAV_KEY, JSON.stringify(favs));
         }
+
         updateFavUI(true, true);
-        document.getElementById('localFavModal').classList.remove('open');
+        const modal = document.getElementById('localFavModal');
+        if (modal) modal.classList.remove('open');
+
         showToast('💾 Сохранено локально в этом браузере');
     });
 }
@@ -141,9 +170,10 @@ if (saveLocalFavBtn) {
 // 4. Закрытие модалки локального избранного
 document.querySelectorAll('[data-close-local-fav]').forEach(el => {
     el.addEventListener('click', () => {
-        document.getElementById('localFavModal').classList.remove('open');
+        const modal = document.getElementById('localFavModal');
+        if (modal) modal.classList.remove('open');
     });
-})
+});
 
 /* ==========================================================================
    2. ПОДЕЛИТЬСЯ
@@ -152,8 +182,8 @@ const shareBtn = $('#shareBtn');
 if (shareBtn) {
     shareBtn.addEventListener('click', async () => {
         const shareData = {
-            title: `${window.PLACE_DATA.name} — ВИЗИТ ДОНЕЦК`,
-            text: window.PLACE_DATA.short_description,
+            title: `${window.PLACE_DATA?.name || 'Заведение'} — ВИЗИТ ДОНЕЦК`,
+            text: window.PLACE_DATA?.short_description || '',
             url: window.location.href
         };
         if (navigator.share) {
@@ -174,7 +204,7 @@ function copyToClipboard(text) {
    ========================================================================== */
 const routeModal = $('#routeModal');
 const openRouteBtn = $('#openRouteBtn');
-if (openRouteBtn && routeModal && window.PLACE_DATA.lat && window.PLACE_DATA.lng) {
+if (openRouteBtn && routeModal && window.PLACE_DATA?.lat && window.PLACE_DATA?.lng) {
     // Динамически подставляем координаты в ссылки
     $('#routeYandex').href = `https://yandex.ru/maps/?rtext=~${window.PLACE_DATA.lat},${window.PLACE_DATA.lng}`;
     $('#route2gis').href = `https://2gis.ru/directions?m=${window.PLACE_DATA.lng},${window.PLACE_DATA.lat}`;
@@ -267,10 +297,10 @@ if (openPlaceReportBtn && placeReportModal) {
         placeReportSubmit.textContent = 'Отправляем…';
         const formData = new FormData(placeReportForm);
         try {
-            const response = await fetch('/places/report', {
+            const response = await fetch('/api/v1/places/report', {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
                     'Accept': 'application/json'
                 },
                 body: formData
@@ -354,7 +384,7 @@ const ReviewsManager = {
         if (!container) return;
         container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--mut)">Загрузка отзывов...</div>';
         try {
-            const response = await fetch(`/places/${this.placeId}/reviews?page=${page}`);
+            const response = await fetch(`/api/v1/places/${this.placeId}/reviews?page=${page}`);
             if (!response.ok) throw new Error('HTTP error');
             const data = await response.json();
             this.renderReviews(data.data);
@@ -444,10 +474,10 @@ const ReviewsManager = {
         const submitBtn = form.querySelector('button[type="submit"]');
         submitBtn.disabled = true; submitBtn.textContent = 'Отправка...';
         try {
-            const response = await fetch(`/places/${this.placeId}/reviews`, {
+            const response = await fetch(`/api/v1/places/${this.placeId}/reviews`, {
                 method: 'POST',
                 body: new FormData(form),
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json' }
             });
             const data = await response.json();
             if (response.ok) {
@@ -470,10 +500,10 @@ const ReviewsManager = {
         submitBtn.disabled = true; submitBtn.textContent = 'Отправка...';
         const reviewId = form.querySelector('[name="review_id"]').value;
         try {
-            const response = await fetch(`/places/${this.placeId}/reviews/${reviewId}/reply`, {
+            const response = await fetch(`/api/v1/places/${this.placeId}/reviews/${reviewId}/reply`, {
                 method: 'POST',
                 body: new FormData(form),
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json' }
             });
             const data = await response.json();
             if (response.ok) {
@@ -496,10 +526,10 @@ const ReviewsManager = {
         submitBtn.disabled = true; submitBtn.textContent = 'Отправка...';
         const reviewId = form.querySelector('[name="review_id"]').value;
         try {
-            const response = await fetch(`/places/${this.placeId}/reviews/${reviewId}/report`, {
+            const response = await fetch(`/api/v1/places/${this.placeId}/reviews/${reviewId}/report`, {
                 method: 'POST',
                 body: new FormData(form),
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json' }
             });
             const data = await response.json();
             if (response.ok) {
@@ -518,9 +548,9 @@ const ReviewsManager = {
 
     async deleteReview(id) {
         try {
-            const response = await fetch(`/places/${this.placeId}/reviews/${id}`, {
+            const response = await fetch(`/api/v1/places/${this.placeId}/reviews/${id}`, {
                 method: 'DELETE',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json' }
             });
             const data = await response.json();
             if (response.ok) {
@@ -553,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ==========================================================================
-   6. МОДАЛКА МЕНЮ (Оставлена здесь, так как зависит от DOM)
+   6. МОДАЛКА МЕНЮ
    ========================================================================== */
 (function() {
     const modal = $('#menuModal');
@@ -596,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadMenu(placeId) {
         body.innerHTML = `<div class="menu-modal__state"><div class="menu-modal__spinner"></div><p>Загружаем меню…</p></div>`;
         try {
-            const r = await fetch(`/places/${placeId}/menu`, { headers: { Accept: 'application/json' } });
+            const r = await fetch(`/api/v1/places/${placeId}/menu`, { headers: { Accept: 'application/json' } });
             if (!r.ok) throw new Error('HTTP ' + r.status);
             const data = await r.json();
             items = Array.isArray(data.data) ? data.data : [];
@@ -658,6 +688,4 @@ document.addEventListener('DOMContentLoaded', () => {
         if (n1 === 1) return forms[0];
         return forms[2];
     }
-
-
 })();

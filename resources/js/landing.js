@@ -1444,7 +1444,10 @@ function escapeAttr(str) { return escapeHtml(str); }
 
     async function openFavoritesModal() {
         const modal = document.getElementById('favoritesModal');
-        if (!modal) return;
+        if (!modal) {
+            console.error('❌ Модалка #favoritesModal не найдена в DOM');
+            return;
+        }
 
         const localSection = document.getElementById('favLocalSection');
         const globalSection = document.getElementById('favGlobalSection');
@@ -1459,41 +1462,53 @@ function escapeAttr(str) { return escapeHtml(str); }
         localSection.hidden = true;
         globalSection.hidden = true;
         emptyState.hidden = true;
+        authPrompt.hidden = true;
 
+        const LOCAL_FAV_KEY = 'vizit_local_favorites';
         const currentUserId = window.PLACE_DATA?.currentUserId || null;
         let hasAnyFavs = false;
 
-        // --- А. Локальные избранные ---
-        const localIds = JSON.parse(localStorage.getItem('vizit_local_favorites') || '[]');
-        if (localIds.length > 0) {
+        // --- А. Локальные избранные (ЧИТАЕМ ПОЛНЫЕ ДАННЫЕ ИЗ LOCALSTORAGE) ---
+        let localFavs = [];
+        try {
+            const raw = localStorage.getItem(LOCAL_FAV_KEY);
+            console.log(' Raw localStorage data:', raw);
+
+            if (raw) {
+                localFavs = JSON.parse(raw);
+                // Поддержка старого формата (массив ID) — конвертируем
+                if (Array.isArray(localFavs) && localFavs.length > 0 && typeof localFavs[0] === 'number') {
+                    console.warn('⚠️ Старый формат localStorage (только ID). Мигрируем...');
+                    localFavs = localFavs.map(id => ({ id, name: `Место #${id}`, slug: '', saved_at: new Date().toISOString() }));
+                }
+            }
+        } catch (e) {
+            console.error('❌ Ошибка чтения localStorage:', e);
+            localFavs = [];
+        }
+
+        console.log('📋 Локальных избранных:', localFavs.length, localFavs);
+
+        if (localFavs.length > 0) {
             localSection.hidden = false;
             hasAnyFavs = true;
 
-            // Для демо: если у нас нет полных данных, делаем запрос к API для каждого ID
-            // В продакшене лучше сделать один запрос: GET /api/v1/places?ids=1,2,3
-            for (const id of localIds) {
-                try {
-                    const res = await fetch(`/api/v1/places/${id}`); // Адаптируй под свой API
-                    if (res.ok) {
-                        const place = await res.json();
-                        localList.appendChild(createFavItem(place, true));
-                    }
-                } catch (e) {
-                    console.error('Ошибка загрузки локального места:', e);
-                }
-            }
+            localFavs.forEach(place => {
+                const item = createFavItem(place, true);
+                if (item) localList.appendChild(item);
+            });
         }
 
         // --- Б. Глобальные избранные (только если авторизован) ---
         if (currentUserId) {
             authPrompt.hidden = true;
             try {
-                const res = await fetch('/api/v1/account/favorites', { // Адаптируй под свой API
+                const res = await fetch('/api/v1/account/favorites', {
                     headers: { 'Accept': 'application/json' }
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    const globalPlaces = data.data || []; // Массив мест
+                    const globalPlaces = data.data || [];
 
                     if (globalPlaces.length > 0) {
                         globalSection.hidden = false;
@@ -1502,9 +1517,11 @@ function escapeAttr(str) { return escapeHtml(str); }
                             globalList.appendChild(createFavItem(place, false));
                         });
                     }
+                } else {
+                    console.warn('⚠️ API вернул статус:', res.status);
                 }
             } catch (e) {
-                console.error('Ошибка загрузки глобального избранного:', e);
+                console.error('❌ Ошибка загрузки глобального избранного:', e);
             }
         } else {
             // Не авторизован -> показываем призыв к действию
@@ -1521,10 +1538,21 @@ function escapeAttr(str) { return escapeHtml(str); }
         document.body.style.overflow = 'hidden';
     }
 
-// Хелпер для создания HTML элемента избранного
     function createFavItem(place, isLocal) {
+        if (!place) {
+            console.warn('⚠️ createFavItem вызван без данных места');
+            return null;
+        }
+
         const div = document.createElement('a');
-        div.href = `/place/${place.slug}`;
+        // Если slug есть — делаем ссылку, иначе просто div
+        if (place.slug) {
+            div.href = `/place/${place.slug}`;
+        } else {
+            div.href = '#';
+            div.onclick = (e) => e.preventDefault();
+        }
+
         div.className = `fav-item ${isLocal ? 'fav-item--local' : ''}`;
 
         const badgeHtml = isLocal ? `<span class="fav-item__badge">Локально</span>` : '';
@@ -1532,46 +1560,70 @@ function escapeAttr(str) { return escapeHtml(str); }
             `<button class="fav-item__remove" data-remove-local="${place.id}" title="Удалить">✕</button>` :
             `<button class="fav-item__remove" data-remove-global="${place.id}" title="Удалить">✕</button>`;
 
+        const coverUrl = place.cover_url || '/assets/placeholder.jpg';
+        const name = place.name || 'Неизвестное место';
+        const category = place.category?.name || place.category || 'Место';
+        const district = place.district?.name || place.district || '';
+        const metaText = district ? `${category} · ${district}` : category;
+
         div.innerHTML = `
-        <img src="${place.cover_url || '/assets/placeholder.jpg'}" alt="${place.name}" class="fav-item__img">
+        <img src="${coverUrl}" alt="${name}" class="fav-item__img"
+             onerror="this.src='/assets/placeholder.jpg'">
         <div class="fav-item__info">
-            <div class="fav-item__name">${place.name}</div>
+            <div class="fav-item__name">${escapeHtml(name)}</div>
             <div class="fav-item__meta">
                 ${badgeHtml}
-                <span>${place.category?.name || 'Место'} · ${place.district?.name || ''}</span>
+                <span>${escapeHtml(metaText)}</span>
             </div>
         </div>
         ${removeBtnHtml}
     `;
 
-        // Логика удаления (чтобы клик по кнопке удаления не переходил по ссылке)
+        // Логика удаления
         const removeBtn = div.querySelector('.fav-item__remove');
         removeBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
 
             if (isLocal) {
-                let localIds = JSON.parse(localStorage.getItem('vizit_local_favorites') || '[]');
-                localIds = localIds.filter(id => id !== place.id);
-                localStorage.setItem('vizit_local_favorites', JSON.stringify(localIds));
+                const LOCAL_FAV_KEY = 'vizit_local_favorites';
+                let localFavs = JSON.parse(localStorage.getItem(LOCAL_FAV_KEY) || '[]');
+                localFavs = localFavs.filter(f => f.id !== place.id);
+                localStorage.setItem(LOCAL_FAV_KEY, JSON.stringify(localFavs));
+
                 div.remove();
 
-                // Если список стал пустым, обновляем состояние
-                if (localIds.length === 0) {
+                // Проверяем, не стал ли список пустым
+                if (localFavs.length === 0) {
                     document.getElementById('favLocalSection').hidden = true;
                     checkEmptyState();
                 }
-                showToast('Удалено из локального избранного');
+
+                // Используем глобальную showToast или локальную toast
+                if (typeof showToast === 'function') {
+                    showToast('Удалено из локального избранного');
+                } else if (typeof toast === 'function') {
+                    toast('Удалено из локального избранного');
+                }
             } else {
                 // TODO: API запрос на удаление глобального избранного
-                // fetch(`/api/v1/places/${place.id}/favorite`, { method: 'DELETE', ... })
                 div.remove();
                 checkEmptyState();
-                showToast('Удалено из избранного');
+                if (typeof showToast === 'function') {
+                    showToast('Удалено из избранного');
+                }
             }
         });
 
         return div;
+    }
+
+// Защита от XSS
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, s => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[s]));
     }
 
     function checkEmptyState() {
@@ -1579,12 +1631,15 @@ function escapeAttr(str) { return escapeHtml(str); }
         const globalList = document.getElementById('favGlobalList');
         const emptyState = document.getElementById('favEmptyState');
 
-        if (localList.children.length === 0 && globalList.children.length === 0) {
-            document.getElementById('favLocalSection').hidden = true;
-            document.getElementById('favGlobalSection').hidden = true;
-            emptyState.hidden = false;
+        if (localList && globalList && emptyState) {
+            if (localList.children.length === 0 && globalList.children.length === 0) {
+                document.getElementById('favLocalSection').hidden = true;
+                document.getElementById('favGlobalSection').hidden = true;
+                emptyState.hidden = false;
+            }
         }
     }
+
 
 // Закрытие модалки избранного
     document.querySelectorAll('[data-close-fav]').forEach(el => {

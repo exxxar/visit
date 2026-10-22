@@ -53,7 +53,12 @@
         window.PLACE_DATA = {
             id: {{ $place->id }},
             name: '{{ addslashes($place->name) }}',
+            slug: '{{ $place->slug }}',
             short_description: '{{ addslashes($place->short_description) }}',
+            cover_url: '{{ $place->cover_url ? asset($place->cover_url) : '/assets/placeholder.jpg' }}',
+            category: '{{ $place->category?->name ?? 'Место' }}',
+            district: '{{ $place->district?->name ?? '' }}',
+            rating: {{ (float)$place->rating }},
             lat: {{ $place->lat ?? 'null' }},
             lng: {{ $place->lng ?? 'null' }},
             isOwner: {{ auth()->check() && auth()->id() === $place->user_id ? 'true' : 'false' }},
