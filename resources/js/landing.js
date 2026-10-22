@@ -659,25 +659,76 @@ if (geoBtn) {
 
 // Запуск загрузки данных карты
 loadMapData();
-
 /* ========================================================================
-   РАЙОНЫ И КАТЕГОРИИ (АДАПТИРОВАНО ПОД НОВУЮ АРХИТЕКТУРУ)
+   РАЙОНЫ И КАТЕГОРИИ (ПЕРЕАДРЕСАЦИЯ В КАТАЛОГ ПО SLUG)
    ======================================================================== */
-// Заглушка для goDistrict, чтобы не вызывать несуществующую applyState
-function goDistrict(name) {
-    const sel = $('#districtSel');
-    if (sel) sel.value = name;
-    const mapEl = $('#map');
-    if (mapEl) mapEl.scrollIntoView({behavior: 'smooth'});
-    toast(name + ' район: фильтрация в разработке');
+
+// Функция перехода в каталог с фильтром по району (теперь принимает slug)
+function goDistrict(slug) {
+    if (!slug) return;
+    window.location.href = `/places?districts[]=${encodeURIComponent(slug)}`;
 }
 
-function jumpToCategory(cat, label) {
-    const mapEl = $('#map');
-    if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    toast(`Категория: ${label || cat} (фильтрация в разработке)`);
+// 1. Обработка кликов по SVG-карте районов
+$$('.d-area').forEach(area => {
+    area.style.cursor = 'pointer';
+    area.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // <-- ИЗМЕНЕНО: берем slug вместо названия
+        const districtSlug = area.dataset.slug;
+        if (districtSlug) {
+            goDistrict(districtSlug);
+        }
+    });
+});
+
+// 2. Рендер и обработка кликов по карточкам районов в сетке (#distGrid)
+function renderDistrictGrid() {
+    const grid = $('#distGrid');
+    if (!grid) return;
+
+    const districts = window.LANDING?.districts || [];
+
+    if (districts.length > 0) {
+        const colorMap = {
+            'Куйбышевский': 'var(--blue)',
+            'Киевский': 'var(--lime)',
+            'Калининский': 'var(--cyan)',
+            'Кировский': 'var(--yellow)',
+            'Ворошиловский': 'var(--magenta)',
+            'Будённовский': 'var(--orange)',
+            'Петровский': 'var(--violet)',
+            'Ленинский': 'var(--rose)',
+            'Пролетарский': 'var(--emerald)'
+        };
+
+        grid.innerHTML = districts.map(d => {
+            const color = colorMap[d.name] || 'var(--cyan)';
+            const placesCount = d.stats?.places || 0;
+            const topCats = (d.stats?.cats || []).slice(0, 3);
+
+            // <-- ИЗМЕНЕНО: используем d.slug для формирования ссылки
+            const districtSlug = d.slug || d.name;
+
+            return `
+                <a href="/places?districts[]=${encodeURIComponent(districtSlug)}" class="d-card" style="--dc: ${color}">
+                    ${d.image ? `<div class="d-bg" style="background-image:url('${d.image}')"></div>` : ''}
+                    <h3>${d.name}</h3>
+                    <div class="dc">${placesCount} <small>мест</small></div>
+                    <div class="b-tags">
+                        ${topCats.map(c => `<span>${c}</span>`).join('')}
+                    </div>
+                    <div class="b-link">Все места →</div>
+                </a>
+            `;
+        }).join('');
+    }
 }
 
+// Запускаем рендер сетки районов при загрузке страницы
+renderDistrictGrid();
+
+// Обработка кликов по карточкам категорий (Bento grid)
 const CAT_MAP = {
     'cat-food': 'food', 'cat-leisure': 'leisure', 'cat-beauty': 'beauty',
     'cat-shop': 'shop', 'cat-auto': 'auto',
@@ -685,18 +736,24 @@ const CAT_MAP = {
 
 Object.entries(CAT_MAP).forEach(([id, cat]) => {
     const card = document.getElementById(id);
-    if (card) card.onclick = () => jumpToCategory(cat, card.querySelector('h3')?.textContent);
+    if (card) {
+        card.onclick = () => {
+            window.location.href = `/places?categories[]=${cat}`;
+        };
+    }
 });
 
 $$('.b-card[data-cat]').forEach(card => {
-    card.onclick = () => jumpToCategory(card.dataset.cat, card.querySelector('h3')?.textContent);
+    card.onclick = () => {
+        const cat = card.dataset.cat;
+        if (cat) window.location.href = `/places?categories[]=${cat}`;
+    };
 });
 
 $$('.quick-card').forEach(card => {
     card.onclick = () => {
         const cat = card.dataset.category;
-        if (!cat) return;
-        jumpToCategory(cat, card.querySelector('h3')?.textContent);
+        if (cat) window.location.href = `/places?categories[]=${cat}`;
     };
 });
 

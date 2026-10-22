@@ -7,7 +7,7 @@
         </div>
         <div class="moods">
             <div class="m-card reveal" data-mood="bars" data-msg="Вечер в городе: бары, рестораны, клубы" style="--ac:var(--violet)">
-                <span class="m-emo">🌙</span><h3>Вечер в городе</h3><p>Бары, рестораны, караоке и клубы.</p>
+                <span class="m-emo"></span><h3>Вечер в городе</h3><p>Бары, рестораны, караоке и клубы.</p>
             </div>
             <div class="m-card reveal" data-mood="coffee" data-msg="Медленное утро: кофейни и завтраки" style="--ac:var(--orange)">
                 <span class="m-emo">☕</span><h3>Медленное утро</h3><p>Кофейни, пекарни и завтраки.</p>
@@ -28,5 +28,34 @@
                 <span class="m-emo">🚗</span><h3>Позаботиться об автомобиле</h3><p>Сервис, мойки и детейлинг.</p>
             </div>
         </div>
+
+        {{-- НОВЫЙ БЛОК: Призыв к регистрации для туристов --}}
+        @guest
+            <div class="mood-auth-prompt reveal">
+                <div class="mood-auth-prompt__content">
+                    <div class="mood-auth-prompt__ico">🎒</div>
+                    <h3>Стань исследователем города</h3>
+                    <p>Создай аккаунт, чтобы сохранять избранные места, оставлять отзывы и получать персональные рекомендации от ИИ-помощника.</p>
+                    <div class="mood-auth-prompt__actions">
+                        <a href="/register" class="btn btn-grad">Создать аккаунт</a>
+                        <a href="/login" class="btn btn-ghost">Уже есть аккаунт</a>
+                    </div>
+                </div>
+                <div class="mood-auth-prompt__features">
+                    <div class="feature">
+                        <span class="feature__ico">❤️</span>
+                        <span>Избранное на всех устройствах</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature__ico">⭐</span>
+                        <span>Оставляй отзывы и оценки</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature__ico">🤖</span>
+                        <span>Персональные рекомендации ИИ</span>
+                    </div>
+                </div>
+            </div>
+        @endguest
     </div>
 </section>
