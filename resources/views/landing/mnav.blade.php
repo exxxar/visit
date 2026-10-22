@@ -8,7 +8,9 @@
             <span>🗺️</span>
             Карта
         </a>
-        <a href="javascript:void(0)" class="m-add" data-open="addModal" aria-label="Добавить место">
+        <a
+            style="padding: 0;margin-bottom: 25px;"
+            href="javascript:void(0)" class="m-add" data-open="addModal" aria-label="Добавить место">
             ✨
         </a>
         <a href="#events">
