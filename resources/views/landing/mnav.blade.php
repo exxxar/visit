@@ -9,10 +9,10 @@
             Карта
         </a>
         <a href="javascript:void(0)" class="m-add" data-open="addModal" aria-label="Добавить место">
-            ➕
+            ✨
         </a>
         <a href="#events">
-            <span>🎟️</span>
+            <span>📅</span>
             Афиша
         </a>
         <a href="#top" id="mSearch">
