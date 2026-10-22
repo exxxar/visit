@@ -1,3 +1,29 @@
+/* ==========================================================================
+   ОЧИСТКА СТАРЫХ SERVICE WORKERS
+   ========================================================================== */
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => {
+            // Удаляем все старые регистрации
+            registration.unregister().then(() => {
+                console.log('✅ Старый Service Worker удалён');
+            });
+        });
+    });
+
+    // Очищаем кэши Workbox, если они есть
+    if ('caches' in window) {
+        caches.keys().then(names => {
+            names.forEach(name => {
+                if (name.includes('workbox') || name.includes('precache')) {
+                    caches.delete(name);
+                    console.log(`✅ Кэш "${name}" удалён`);
+                }
+            });
+        });
+    }
+}
+
 /* ============ landing.js ============ */
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
