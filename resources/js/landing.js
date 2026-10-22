@@ -1545,15 +1545,25 @@ function escapeAttr(str) { return escapeHtml(str); }
         }
 
         const div = document.createElement('a');
-        // Если slug есть — делаем ссылку, иначе просто div
-        if (place.slug) {
-            div.href = `/place/${place.slug}`;
-        } else {
-            div.href = '#';
-            div.onclick = (e) => e.preventDefault();
-        }
 
-        div.className = `fav-item ${isLocal ? 'fav-item--local' : ''}`;
+        // Если slug есть — делаем рабочую ссылку
+        if (place.slug && place.slug !== 'unknown' && place.slug !== '#') {
+            div.href = `/place/${place.slug}`;
+            div.className = `fav-item ${isLocal ? 'fav-item--local' : ''}`;
+        } else {
+            // Фолбэк для старых битых записей
+            console.warn('⚠️ У места отсутствует slug. Данные:', place);
+            div.href = '#';
+            div.className = `fav-item ${isLocal ? 'fav-item--local' : ''}`;
+            div.style.opacity = '0.6';
+            div.style.cursor = 'not-allowed';
+            div.title = 'Пересохраните это место, чтобы ссылка заработала';
+
+            div.onclick = (e) => {
+                e.preventDefault();
+                showToast('⚠️ Ссылка устарела. Удалите и сохраните место заново.');
+            };
+        }
 
         const badgeHtml = isLocal ? `<span class="fav-item__badge">Локально</span>` : '';
         const removeBtnHtml = isLocal ?
@@ -1593,25 +1603,17 @@ function escapeAttr(str) { return escapeHtml(str); }
 
                 div.remove();
 
-                // Проверяем, не стал ли список пустым
                 if (localFavs.length === 0) {
                     document.getElementById('favLocalSection').hidden = true;
                     checkEmptyState();
                 }
 
-                // Используем глобальную showToast или локальную toast
-                if (typeof showToast === 'function') {
-                    showToast('Удалено из локального избранного');
-                } else if (typeof toast === 'function') {
-                    toast('Удалено из локального избранного');
-                }
+                if (typeof showToast === 'function') showToast('Удалено из локального избранного');
+                else if (typeof toast === 'function') toast('Удалено из локального избранного');
             } else {
-                // TODO: API запрос на удаление глобального избранного
                 div.remove();
                 checkEmptyState();
-                if (typeof showToast === 'function') {
-                    showToast('Удалено из избранного');
-                }
+                if (typeof showToast === 'function') showToast('Удалено из избранного');
             }
         });
 

@@ -141,32 +141,44 @@ if (saveLocalFavBtn) {
         const pd = window.PLACE_DATA || {};
         const favs = getLocalFavs();
 
+        // УМНЫЙ ФОЛБЭК: берем данные из PLACE_DATA, а если их нет — вытаскиваем со страницы
+        const currentSlug = pd.slug || window.location.pathname.split('/').filter(Boolean).pop() || 'unknown';
+        const currentName = pd.name || document.querySelector('h1')?.textContent || 'Заведение';
+        const kickerText = document.querySelector('.kicker')?.textContent || '';
+        const [currentCat, currentDist] = kickerText.split('·').map(s => s.trim());
+        const currentCover = pd.cover_url || document.querySelector('.pl-main')?.src || '/assets/placeholder.jpg';
+        const currentRating = pd.rating || parseFloat(document.querySelector('.pl-rate b')?.textContent) || 0;
+
         // Формируем полный объект места для сохранения
         const placeObj = {
             id: pd.id,
-            name: pd.name || 'Заведение',
-            slug: pd.slug || '',
-            cover_url: pd.cover_url || '/assets/placeholder.jpg',
-            category: pd.category || 'Место',
-            district: pd.district || '',
-            rating: pd.rating || 0,
+            name: currentName,
+            slug: currentSlug,
+            cover_url: currentCover,
+            category: pd.category || currentCat || 'Место',
+            district: pd.district || currentDist || '',
+            rating: currentRating,
             saved_at: new Date().toISOString()
         };
 
-        // Проверяем, нет ли уже такого места
-        if (!favs.some(f => f.id === placeObj.id)) {
+        // Проверяем, нет ли уже такого места (по ID)
+        const existingIndex = favs.findIndex(f => f.id === placeObj.id);
+        if (existingIndex !== -1) {
+            // Обновляем существующую запись, чтобы исправить старый slug, если он был пустым
+            favs[existingIndex] = placeObj;
+        } else {
             favs.push(placeObj);
-            localStorage.setItem(LOCAL_FAV_KEY, JSON.stringify(favs));
         }
 
+        localStorage.setItem(LOCAL_FAV_KEY, JSON.stringify(favs));
         updateFavUI(true, true);
+
         const modal = document.getElementById('localFavModal');
         if (modal) modal.classList.remove('open');
 
         showToast('💾 Сохранено локально в этом браузере');
     });
 }
-
 // 4. Закрытие модалки локального избранного
 document.querySelectorAll('[data-close-local-fav]').forEach(el => {
     el.addEventListener('click', () => {
