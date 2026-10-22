@@ -9,6 +9,7 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/landing.css',
+                'resources/css/place.css',
                 'resources/js/landing.js',
                 'resources/css/admin.css',
                 'resources/js/app.js',

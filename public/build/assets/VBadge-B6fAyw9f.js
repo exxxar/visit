@@ -1,1 +1,0 @@
-import{o as e,c as t,t as r,f as l}from"./app-Cbzmhbz4.js";const n={__name:"VBadge",props:{color:{type:String,default:"gray"},label:String},setup(a){return(o,s)=>(e(),t("span",{class:l(["vbadge",`vbadge--${a.color}`])},r(a.label),3))}};export{n as _};
