@@ -63,7 +63,7 @@ class ReferralController extends Controller
         ]);
 
         $refPhone = session('referral_phone');
-        $referrer = User::where('phone_normalized', $refPhone)->first();
+        $referrer =  User::where('phone', $request->phone)->first();
 
         // Определяем, является ли реферер рекламным партнёром
         $partnerId = null;
@@ -84,7 +84,7 @@ class ReferralController extends Controller
                 'email'            => $data['email'],
                 'password'         => Hash::make($data['password']),
                 'phone'            => $data['contact_phone'],
-                'phone_normalized' => PhoneNormalizer::normalize($data['contact_phone']),
+               // 'phone_normalized' => PhoneNormalizer::normalize($data['contact_phone']),
                 'referred_by'      => $referrer?->id,
             ]);
 
@@ -219,7 +219,7 @@ class ReferralController extends Controller
         }
 
         // ищем реферера (если он уже зарегистрирован)
-        $referrer = User::where('phone_normalized', $normalized)->first();
+        $referrer = User::where('phone', $normalized)->first();
 
         // СОЗДАЁМ pending-приглашение при первом переходе
         // защита от дублей: одна запись на сессию/IP в течение 24 часов
@@ -340,7 +340,7 @@ class ReferralController extends Controller
         ]);
 
         $refPhone = session('referral_phone');
-        $referrer = User::where('phone_normalized', $refPhone)->first();
+        $referrer = User::where('phone', $refPhone)->first();
         $sessionId = session()->getId();
 
         // 1. Создаём пользователя
@@ -349,9 +349,9 @@ class ReferralController extends Controller
             'email'            => $data['email'],
             'password'         => Hash::make($data['password']),
             'phone'            => $data['contact_phone'] ?? $data['place_phone'] ?? null,
-            'phone_normalized' => \App\Helpers\PhoneNormalizer::normalize(
+           /* 'phone_normalized' => \App\Helpers\PhoneNormalizer::normalize(
                 $data['contact_phone'] ?? $data['place_phone'] ?? null
-            ),
+            ),*/
             'referred_by'      => $referrer?->id,
         ]);
 
@@ -547,14 +547,14 @@ class ReferralController extends Controller
         ]);
 
         $refPhone = session('referral_phone');
-        $referrer = User::where('phone_normalized', $refPhone)->first();
+        $referrer = User::where('phone', $refPhone)->first();
 
         $user = User::create([
             'name'             => $data['name'],
             'email'            => $data['email'],
             'password'         => Hash::make($data['password']),
             'phone'            => $data['user_phone'],
-            'phone_normalized' => PhoneNormalizer::normalize($data['user_phone']),
+          /*  'phone_normalized' => PhoneNormalizer::normalize($data['user_phone']),*/
             'referred_by'      => $referrer?->id,
             'meta'             => [
                 'speciality' => $data['speciality'],
@@ -604,14 +604,14 @@ class ReferralController extends Controller
         ]);
 
         $refPhone = session('referral_phone');
-        $referrer = User::where('phone_normalized', $refPhone)->first();
+        $referrer = User::where('phone', $refPhone)->first();
 
         $user = User::create([
             'name'             => $data['name'],
             'email'            => $data['email'],
             'password'         => Hash::make($data['password']),
             'phone'            => $data['user_phone'],
-            'phone_normalized' => PhoneNormalizer::normalize($data['user_phone']),
+          /*  'phone_normalized' => PhoneNormalizer::normalize($data['user_phone']),*/
             'referred_by'      => $referrer?->id,
             'meta'             => [
                 'platform'     => $data['platform'],
@@ -650,7 +650,7 @@ class ReferralController extends Controller
      */
     public static function bindPendingInvites(User $user): void
     {
-        $phone = $user->phone_normalized;
+        $phone = $user->phone;
         if (!$phone) return;
 
         $pending = ReferralInvite::where('referrer_phone', $phone)

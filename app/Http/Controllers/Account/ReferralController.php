@@ -12,7 +12,7 @@ class ReferralController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $phone = $user->phone_normalized;
+        $phone = $user->phone;
 
         if (!$phone) {
             return Inertia::render('Account/Referrals/Index', [
