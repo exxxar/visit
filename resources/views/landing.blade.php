@@ -13,6 +13,8 @@
     <meta name="apple-mobile-web-app-title" content="Код Новороссии">
     <meta name="application-name" content="Код Новороссии">
 
+    <link rel="manifest" href="/build/manifest.webmanifest">
+
     <!-- ВЕРСИЯ ПРИЛОЖЕНИЯ ИЗ БЕКЕНДА -->
     <meta name="app-version" content="{{ $settings['app_version'] ?? '1.0.0' }}">
 

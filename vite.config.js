@@ -29,8 +29,8 @@ export default defineConfig({
             injectRegister: 'auto',
             includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
             manifest: {
-                name: 'ВИЗИТ ДОНЕЦК',
-                short_name: 'Визит ДНР',
+                name: 'КОД НОВОРОССИИ',
+                short_name: 'КОД НОВОРОССИИ',
                 description: 'Главный путеводитель по городу',
                 theme_color: '#05070d', // Твой --bg из CSS
                 background_color: '#05070d',
