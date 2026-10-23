@@ -247,7 +247,7 @@ const renderMarkers = () => {
 onMounted(() => {
     map = new maplibregl.Map({
         container: mapContainer.value,
-        style: 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+        style: 'https://api.maptiler.com/maps/streets/style.json?key=l7t0HU7CqsgOKgS9rtvU',
         center: [37.805, 48.008],
         zoom: 12
     })
