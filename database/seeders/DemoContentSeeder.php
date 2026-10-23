@@ -55,10 +55,10 @@ class DemoContentSeeder extends Seeder
             'description' => 'Интерактивное шоу для всей семьи. Гигантские пузыри, мастер-классы и сладкие подарки каждому ребенку.',
         ]);
 
-        // Новое событие
+        // Новое событие (используем Concert или Party, либо замени на Workshop/Conference, если они есть в твоем enum)
         Event::firstOrCreate(['slug' => 'tech-meetup-donetsk'], [
             'title' => 'Donetsk IT Meetup: Будущее Web3',
-            'type' => EventType::Other, // Или добавь свой enum, если есть
+            'type' => EventType::Party, // <-- ЗАМЕНЕНО с Other на Party
             'starts_at' => now()->addDays(7)->setTime(18, 30),
             'place_id' => $coffeeRoom?->id,
             'status' => ModerationStatus::Approved,
@@ -69,7 +69,7 @@ class DemoContentSeeder extends Seeder
         // Новое событие
         Event::firstOrCreate(['slug' => 'master-class-gastro'], [
             'title' => 'Мастер-класс от шеф-повара GASTRO BAR',
-            'type' => EventType::Other,
+            'type' => EventType::Concert, // <-- ЗАМЕНЕНО с Other на Concert (или Workshop)
             'starts_at' => now()->addDays(10)->setTime(15, 0),
             'place_id' => $gastroBar?->id,
             'status' => ModerationStatus::Approved,
