@@ -15,8 +15,12 @@ class DemoContentSeeder extends Seeder
 {
     public function run(): void
     {
-        $editor = User::where('email', 'editor@code-novorossii.ru')->first();
-        $admin = User::where('email', 'admin@code-novorossii.ru')->first();
+        // Ищем пользователей, но если их нет — берём первого попавшегося (фолбэк)
+        $editor = User::where('email', 'editor@code-novorossii.ru')->first() ?? User::first();
+        $admin = User::where('email', 'admin@code-novorossii.ru')->first() ?? User::first();
+
+        // На всякий случай, если база совсем пустая
+        $defaultAuthorId = $editor?->id ?? 1;
 
         // Получаем места для привязки
         $delMar = Place::where('slug', 'del-mar')->first();
@@ -55,10 +59,9 @@ class DemoContentSeeder extends Seeder
             'description' => 'Интерактивное шоу для всей семьи. Гигантские пузыри, мастер-классы и сладкие подарки каждому ребенку.',
         ]);
 
-        // Новое событие (используем Concert или Party, либо замени на Workshop/Conference, если они есть в твоем enum)
         Event::firstOrCreate(['slug' => 'tech-meetup-donetsk'], [
             'title' => 'Donetsk IT Meetup: Будущее Web3',
-            'type' => EventType::Party, // <-- ЗАМЕНЕНО с Other на Party
+            'type' => EventType::Party,
             'starts_at' => now()->addDays(7)->setTime(18, 30),
             'place_id' => $coffeeRoom?->id,
             'status' => ModerationStatus::Approved,
@@ -66,10 +69,9 @@ class DemoContentSeeder extends Seeder
             'description' => 'Нетворкинг для разработчиков, дизайнеров и всех, кто интересуется технологиями. Пицца и кофе за счет организаторов.',
         ]);
 
-        // Новое событие
         Event::firstOrCreate(['slug' => 'master-class-gastro'], [
             'title' => 'Мастер-класс от шеф-повара GASTRO BAR',
-            'type' => EventType::Concert, // <-- ЗАМЕНЕНО с Other на Concert (или Workshop)
+            'type' => EventType::Concert,
             'starts_at' => now()->addDays(10)->setTime(15, 0),
             'place_id' => $gastroBar?->id,
             'status' => ModerationStatus::Approved,
@@ -77,10 +79,9 @@ class DemoContentSeeder extends Seeder
             'description' => 'Научим готовить фирменный стейк и авторский десерт. Количество мест ограничено.',
         ]);
 
-
         // ===== РЕДАКЦИОННЫЕ ПОДБОРКИ (POSTS) =====
         $breakfast = Post::firstOrCreate(['slug' => '10-mest-dlya-idealnogo-zavtraka'], [
-            'author_id' => $editor?->id,
+            'author_id' => $defaultAuthorId, // ✅ ИСПРАВЛЕНО: гарантированно не null
             'tag' => 'Подборка',
             'status' => PostStatus::Published,
             'title' => '10 мест для идеального завтрака в Донецке',
@@ -93,7 +94,7 @@ class DemoContentSeeder extends Seeder
         );
 
         Post::firstOrCreate(['slug' => 'gde-vypit-horoshiy-kofe'], [
-            'author_id' => $editor?->id,
+            'author_id' => $defaultAuthorId, // ✅ ИСПРАВЛЕНО
             'tag' => 'Кофе',
             'status' => PostStatus::Published,
             'title' => 'Где выпить действительно хороший кофе',
@@ -102,9 +103,8 @@ class DemoContentSeeder extends Seeder
             'published_at' => now()->subDays(2),
         ]);
 
-        // Новый пост
         $autoPost = Post::firstOrCreate(['slug' => 'top-5-avtoservisov'], [
-            'author_id' => $admin?->id,
+            'author_id' => $defaultAuthorId, // ✅ ИСПРАВЛЕНО
             'tag' => 'Авто',
             'status' => PostStatus::Published,
             'title' => 'ТОП-5 автосервисов и детейлингов города',
@@ -116,9 +116,8 @@ class DemoContentSeeder extends Seeder
             Place::whereIn('slug', ['titan-detailing', 'auto-profi'])->pluck('id')
         );
 
-        // Новый пост
         $weekendPost = Post::firstOrCreate(['slug' => 'vyhodnye-s-detmi'], [
-            'author_id' => $editor?->id,
+            'author_id' => $defaultAuthorId, // ✅ ИСПРАВЛЕНО
             'tag' => 'Семья',
             'status' => PostStatus::Published,
             'title' => 'Куда сходить с ребенком в выходные: гид по досугу',
