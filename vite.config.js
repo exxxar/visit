@@ -120,6 +120,9 @@ export default defineConfig({
             }
         })
     ],
+    worker: {
+        format: 'es',
+    },
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./resources/js', import.meta.url)),

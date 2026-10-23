@@ -1,9 +1,12 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import { useForm, router } from '@inertiajs/vue3'
-import * as maplibregl from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import VButton from '@/Components/ui/VButton.vue'
+
+// Стандартный воркер MapLibre отлично работает в Vite по умолчанию.
+// Ручной импорт удалён, чтобы избежать ошибок сборки Rollup.
 
 const props = defineProps(['layers', 'objects', 'places'])
 
@@ -122,7 +125,7 @@ const draggedLayer = ref(null)
 const onLayerDragStart = (e, layer) => {
     draggedLayer.value = layer
     e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', layer.id) // Критично для Firefox/Safari
+    e.dataTransfer.setData('text/plain', layer.id)
     e.target.classList.add('dragging')
 }
 const onLayerDragEnd = (e) => {
@@ -152,7 +155,7 @@ const draggedObject = ref(null)
 const onObjectDragStart = (e, obj) => {
     draggedObject.value = obj
     e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', obj.id) // Критично для Firefox/Safari
+    e.dataTransfer.setData('text/plain', obj.id)
     e.target.classList.add('dragging')
 }
 const onObjectDragEnd = (e) => {
