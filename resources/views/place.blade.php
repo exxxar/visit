@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $place->name }} — {{ $place->category?->name }} в районе {{ $place->district?->name }} | КОД НОВОРОССИИ</title>
+    <title>{{ $place->name }} — {{ $place->category?->name }} в районе {{ $place->district?->name }} | ВИЗИТ ДОНЕЦК</title>
     <meta name="description" content="{{ $place->short_description }} Рейтинг {{ number_format($place->rating, 1, '.', '') }}, отзывов: {{ $place->reviews_count }}. Адрес: {{ $place->address }}.">
     <link rel="canonical" href="{{ request()->url() }}">
     <link rel="icon" type="image/png" href="/favicon.png">
@@ -11,7 +11,7 @@
 
     {{-- Open Graph --}}
     <meta property="og:type" content="place">
-    <meta property="og:title" content="{{ $place->name }} — КОД НОВОРОССИИ">
+    <meta property="og:title" content="{{ $place->name }} — ВИЗИТ ДОНЕЦК">
     <meta property="og:description" content="{{ $place->short_description }}">
     <meta property="og:image" content="{{ $place->cover_url ? asset($place->cover_url) : '' }}">
     <meta property="og:url" content="{{ request()->url() }}">
@@ -74,7 +74,7 @@
 
 <header class="hdr scrolled">
     <div class="wrap hdr-in">
-        <a class="logo" href="/">КОД<em>НОВОРОССИИ</em></a>
+        <a class="logo" href="/">ВИЗИТ<em>ДОНЕЦК</em></a>
         <nav class="nav-links">
             <a href="/#places">Места</a><a href="/#map">Карта</a><a href="/#events">Афиша</a>
         </nav>

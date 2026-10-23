@@ -24,24 +24,25 @@ class AiChatService
         // 2. Ищем релевантные заведения в БД (контекст)
         $contextPlaces = [];
         if (!empty($keywords)) {
-            // Убрали ->where('is_active', true), так как этой колонки нет.
-            // Если у тебя есть поле статуса (например, 'approved'), раскомментируй строку ниже:
-            // ->where('status', 'approved')
-
             $contextPlaces = Place::where(function ($q) use ($keywords) {
                 foreach ($keywords as $word) {
                     $q->orWhere('name', 'like', "%{$word}%")
                         ->orWhere('short_description', 'like', "%{$word}%")
-                        ->orWhereHas('category', fn($c) => $c->where('name', 'like', "%{$word}%"));
+                        ->orWhere('description', 'like', "%{$word}%")      // ✅ ДОБАВЛЕНО: полное описание
+                        ->orWhere('address', 'like', "%{$word}%")         // ✅ ДОБАВЛЕНО: адрес
+                        ->orWhereHas('category', fn($c) => $c->where('name', 'like', "%{$word}%"))
+                        ->orWhereHas('district', fn($d) => $d->where('name', 'like', "%{$word}%")); // ✅ ДОБАВЛЕНО: район
                 }
             })
-                ->with('category:id,name')
+                ->with(['category:id,name', 'district:id,name']) // ✅ ДОБАВЛЕНО: подгружаем район
                 ->limit(5) // Ограничиваем контекст, чтобы не переполнить токены
-                ->get(['id', 'name', 'short_description', 'category_id'])
+                ->get(['id', 'name', 'short_description', 'description', 'address', 'category_id', 'district_id'])
                 ->map(fn($p) => [
                     'name' => $p->name,
                     'category' => $p->category?->name ?? 'Заведение',
-                    'info' => $p->short_description ?: 'Описание отсутствует',
+                    'district' => $p->district?->name ?? 'Не указан',
+                    'address' => $p->address ?? 'Адрес не указан',
+                    'description' => $p->short_description ?: ($p->description ?: 'Описание отсутствует'),
                 ])
                 ->toArray();
         }
@@ -55,7 +56,7 @@ class AiChatService
 ПРАВИЛА:
 1. Используй ТОЛЬКО информацию из блока [КОНТЕКСТ ЗАВЕДЕНИЙ]. Не выдумывай места.
 2. Если в контексте нет подходящих мест, честно скажи: "К сожалению, в моей базе пока нет точных совпадений по вашему запросу. Попробуйте уточнить категорию или название".
-3. Отвечай кратко, структурированно и с эмодзи.
+3. Отвечай кратко, структурированно и с эмодзи. Обязательно упоминай район и адрес заведения, если эта информация есть в контексте.
 4. Если пользователь спрашивает что-то не по теме города/заведений или использует нецензурную лексику, вежливо верни его к теме путеводителя.
 
 [КОНТЕКСТ ЗАВЕДЕНИЙ]
@@ -70,7 +71,7 @@ EOT;
             [['role' => 'user', 'content' => $userMessage]]
         );
 
-        // 5. Запрос к DeepSeek
+        // 5. Запрос к DeepSeek (или другому провайдеру)
         try {
             $response = Http::withToken(config('services.deepseek.api_key'))
                 ->timeout(15)
@@ -78,7 +79,7 @@ EOT;
                     'model' => config('services.deepseek.model'),
                     'messages' => $messages,
                     'temperature' => 0.7,
-                    'max_tokens' => 500,
+                    'max_tokens' => 600, // Немного увеличил лимит для более полных ответов с адресами
                 ]);
 
             if ($response->successful()) {

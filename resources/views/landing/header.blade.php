@@ -1,6 +1,6 @@
 <header class="hdr scrolled">
     <div class="wrap hdr-in">
-        <a class="logo" href="/">КОД<em>НОВОРОССИИ</em></a>
+        <a class="logo" href="/">ВИЗИТ<em>ДОНЕЦК</em></a>
         <nav class="nav-links">
             <a href="/#places">Места</a>
             <a href="/#map">Карта</a>
@@ -13,9 +13,23 @@
             </button>
 
             @auth
-                {{-- Если авторизован — показываем кабинет --}}
-                <a class="btn btn-ghost btn-sm" href="/account">
-                    <span>👤</span> Кабинет
+                @php
+                    $user = auth()->user();
+                    $dashboardUrl = match (true) {
+                        $user->hasAnyRole(['admin', 'moderator', 'editor']) => '/admin',
+                        $user->hasAnyRole(['business', 'tech_partner', 'ad_partner']) => '/account',
+                        default => '/account-users',
+                    };
+
+                    $dashboardLabel = match (true) {
+                        $user->hasAnyRole(['admin', 'moderator', 'editor']) => '⚙️ Админ',
+                        $user->hasAnyRole(['business', 'tech_partner', 'ad_partner']) => '🏢 Кабинет',
+                        default => '🧳 Профиль',
+                    };
+                @endphp
+
+                <a class="btn btn-ghost btn-sm" href="{{ $dashboardUrl }}">
+                    <span>{{ $dashboardLabel }}</span>
                 </a>
             @else
                 {{-- Если не авторизован — показываем кнопку входа --}}

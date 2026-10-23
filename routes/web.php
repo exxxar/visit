@@ -109,16 +109,79 @@ Route::middleware('auth')->get('/dashboard', function (Request $request) {
     });
 })->name('dashboard');
 
+
 /* ==========================================================================
-   4. КАБИНЕТ ТУРИСТА (Только роль user)
+   4. ЕДИНЫЙ КАБИНЕТ ПОЛЬЗОВАТЕЛЯ (Турист + Бизнес + Партнеры)
    ========================================================================== */
-Route::middleware(['auth', 'verified', 'role:user'])
-    ->prefix('account')->name('account.')
-    ->group(function () {
-        Route::get('/', [TouristDashboardController::class, 'index'])->name('dashboard');
-        Route::get('/favorites', [FavoritesController::class, 'index'])->name('favorites');
-        Route::get('/reviews', [MyReviewsController::class, 'index'])->name('reviews');
+Route::middleware(['auth', 'verified'])->prefix('account-users')->name('account-users.')->group(function () {
+
+    /* ==========================================================================
+       3. ДАШБОРД-ХАБ (Развод по ролям после логина)
+       ========================================================================== */
+    Route::middleware('auth')->get('/dashboard', function (Request $request) {
+        $user = $request->user();
+
+        return redirect(match (true) {
+            // 1. Админы и модерация
+            $user->hasAnyRole(['admin', 'moderator', 'editor']) => '/admin',
+
+            // 2. Бизнес и партнеры
+            $user->hasAnyRole(['business', 'tech_partner', 'ad_partner']) => '/account',
+
+            // 3. Туристы и пользователи без явной бизнес-роли
+            default => '/account-users',
+        });
+    })->name('dashboard');
+
+
+    // --- Общие маршруты (доступны всем авторизованным, включая туристов) ---
+    Route::get('/favorites', [FavoritesController::class, 'index'])->name('favorites');
+    Route::get('/reviews', [MyReviewsController::class, 'index'])->name('reviews');
+
+    // ✅ ДОБАВЛЕНО: Управление профилем (Breeze)
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // --- Маршруты ТОЛЬКО для Бизнеса и Партнеров (строгая защита) ---
+    Route::middleware('role:business|tech_partner|ad_partner|admin')->group(function () {
+        Route::get('review/{type}/{id}', [Account\ReviewController::class, 'create'])->name('review.create');
+        Route::post('review', [Account\ReviewController::class, 'store'])->name('review.store');
+
+        Route::get('referrals', [Account\ReferralController::class, 'index'])->name('referrals.index');
+        Route::get('partner/wallet', [Account\PartnerWalletController::class, 'index'])->name('partner.wallet');
+        Route::post('partner/withdraw', [Account\PartnerWalletController::class, 'withdraw'])->name('partner.withdraw');
+
+        // Технический партнёр
+        Route::middleware('partner:tech_partner')->prefix('development')->name('development.')->group(function () {
+            Route::get('/', [DevelopmentController::class, 'index'])->name('index');
+            Route::post('{development}/claim', [DevelopmentController::class, 'claim'])->name('claim');
+            Route::post('{development}/status', [DevelopmentController::class, 'updateStatus'])->name('status');
+        });
+
+        // Рекламный партнёр
+        Route::middleware('partner:ad_partner')->prefix('promotions')->name('promotions.')->group(function () {
+            Route::get('/', [PromotionController::class, 'index'])->name('index');
+            Route::post('{promotion}/claim', [PromotionController::class, 'claim'])->name('claim');
+            Route::post('{promotion}/status', [PromotionController::class, 'updateStatus'])->name('status');
+        });
+
+        Route::post('places/{place}/promote', [Account\PlaceController::class, 'promote'])->name('places.promote');
+        Route::get('/place/{place:slug}', [Account\PlaceController::class, 'show'])->name('place.show');
+        Route::get('places/{place:slug}/edit', [Account\PlaceController::class, 'edit'])->name('places.edit');
+        Route::put('places/{place:slug}', [Account\PlaceController::class, 'update'])->name('places.update');
+        Route::post('places/{place:slug}/photos', [Account\PlaceController::class, 'addPhoto'])->name('places.photos');
+        Route::get('places/{place:slug}/analytics', [Account\AnalyticsController::class, 'show'])->name('analytics');
+
+        Route::get('stories', [Account\StoryController::class, 'index'])->name('stories.index');
+        Route::post('stories', [Account\StoryController::class, 'store'])->name('stories.store');
+        Route::delete('stories/{story}', [Account\StoryController::class, 'destroy'])->name('stories.destroy');
+
+        Route::get('news', [Account\NewsController::class, 'index'])->name('news.index');
+        Route::post('news', [Account\NewsController::class, 'store'])->name('news.store');
+        Route::delete('news/{news}', [Account\NewsController::class, 'destroy'])->name('news.destroy');
     });
+});
 
 /* ==========================================================================
    5. КАБИНЕТ ЗАВЕДЕНИЯ / ПАРТНЕРА (business, tech_partner, ad_partner, admin)
@@ -127,6 +190,14 @@ Route::middleware(['auth', 'verified', 'role:business|tech_partner|ad_partner|ad
     ->prefix('account')->name('account.')
     ->group(function () {
         Route::get('/', Account\DashboardController::class)->name('dashboard');
+
+        // ✅ ДОБАВЛЕНО: Список моих заведений (для меню "Мои заведения")
+        Route::get('/places', [Account\PlaceController::class, 'index'])->name('places.index');
+
+        // ✅ ДОБАВЛЕНО: Управление профилем бизнеса
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
         Route::get('review/{type}/{id}', [Account\ReviewController::class, 'create'])->name('review.create');
         Route::post('review', [Account\ReviewController::class, 'store'])->name('review.store');
@@ -164,7 +235,6 @@ Route::middleware(['auth', 'verified', 'role:business|tech_partner|ad_partner|ad
         Route::post('news', [Account\NewsController::class, 'store'])->name('news.store');
         Route::delete('news/{news}', [Account\NewsController::class, 'destroy'])->name('news.destroy');
     });
-
 /* ==========================================================================
    6. АДМИН-ПАНЕЛЬ
    ========================================================================== */

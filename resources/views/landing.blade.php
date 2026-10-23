@@ -3,15 +3,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>КОД НОВОРОССИИ — главный путеводитель по городу</title>
+    <title>ВИЗИТ ДОНЕЦК — главный путеводитель по городу</title>
     <meta name="description" content="{{ $settings['hero']['sub'] ?? 'Все лучшие места Донецка — в одном путеводителе.' }}">
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#05070d">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Код Новороссии">
-    <meta name="application-name" content="Код Новороссии">
+    <meta name="apple-mobile-web-app-title" content="Визит Донецк">
+    <meta name="application-name" content="Визит Донецк">
 
     <link rel="manifest" href="/build/manifest.webmanifest">
 

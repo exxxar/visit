@@ -917,7 +917,7 @@ if (vZoomIn) vZoomIn.onclick = () => { zoom = Math.min(1.6, zoom + .15); $('#vSt
 if (vZoomOut) vZoomOut.onclick = () => { zoom = Math.max(.7, zoom - .15); $('#vStage')?.style.setProperty('--zoom', zoom); };
 if (vFull) vFull.onclick = () => { document.fullscreenElement ? document.exitFullscreen() : $('#viewer')?.requestFullscreen(); };
 if (vShare) vShare.onclick = async () => {
-    try { await navigator.share({title: 'КОД НОВОРОССИИ', url: location.href}); }
+    try { await navigator.share({title: 'ВИЗИТ ДОНЕЦК', url: location.href}); }
     catch (e) { toast('Ссылка скопирована'); }
 };
 if (vDownload) vDownload.onclick = downloadPDF;
@@ -1096,7 +1096,7 @@ function showStory() {
     }
 
     const sp = $('#storyPlace'), st = $('#storyTitle'), sx = $('#storyText'), ss = $('#storySide');
-    if (sp) sp.textContent = s.place?.name ?? 'КОД НОВОРОССИИ';
+    if (sp) sp.textContent = s.place?.name ?? 'ВИЗИТ ДОНЕЦК';
     if (st) st.textContent = s.title ?? '';
     if (sx) sx.textContent = s.text ?? '';
     if (ss) ss.style.display = (s.title || s.text) ? '' : 'none';

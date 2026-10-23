@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Присоединяйтесь к КОД НОВОРОССИИ</title>
+    <title>Присоединяйтесь к ВИЗИТ ДОНЕЦК</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800;900&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/landing.css', 'resources/js/landing.js'])
@@ -12,7 +12,7 @@
 
 <header class="hdr scrolled">
     <div class="wrap hdr-in">
-        <a class="logo" href="/">КОД<em>НОВОРОССИИ</em></a>
+        <a class="logo" href="/">ВИЗИТ<em>ДОНЕЦК</em></a>
     </div>
 </header>
 
@@ -207,7 +207,7 @@
         <div class="ref-footer reveal">
             <p>
                 <b>Как работает реферальная система?</b><br>
-                Приглашайте партнёров по ссылке <code>код-новороссии.рф?ref=ВАШ_ТЕЛЕФОН</code> — получайте бонусы за каждого приведённого клиента, техпартнёра или рекламного партнёра.
+                Приглашайте партнёров по ссылке <code>визит-донецк.рф?ref=ВАШ_ТЕЛЕФОН</code> — получайте бонусы за каждого приведённого клиента, техпартнёра или рекламного партнёра.
             </p>
         </div>
     </div>

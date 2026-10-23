@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Партнёры — КОД НОВОРОССИИ</title>
+    <title>Партнёры — ВИЗИТ ДОНЕЦК</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800;900&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/landing.css'])
@@ -12,7 +12,7 @@
 
 <header class="hdr scrolled">
     <div class="wrap hdr-in">
-        <a class="logo" href="/">КОД<em>НОВОРОССИИ</em></a>
+        <a class="logo" href="/">ВИЗИТ<em>ДОНЕЦК</em></a>
         <a class="btn btn-ghost btn-sm" href="{{ route('ref.choose') }}">← К реферальной программе</a>
     </div>
 </header>
@@ -79,7 +79,7 @@
                 <h2>Вы специалист в своей области?</h2>
                 <p>
                     Присоединяйтесь к нашей сети, получайте заказы от реальных клиентов
-                    и растите свой доход вместе с экосистемой КОД НОВОРОССИИ.
+                    и растите свой доход вместе с экосистемой ВИЗИТ ДОНЕЦК.
                 </p>
                 <a href="{{ route('ref.ad') }}" class="btn btn-grad partners-cta__btn">
                     Стать рекламным партнёром
@@ -93,7 +93,7 @@
 
 <footer style="border-top: 1px solid var(--line); padding: 40px 0; text-align: center; color: var(--mut); font-size: 13px;">
     <div class="wrap">
-        © {{ date('Y') }} КОД НОВОРОССИИ. Все права защищены.
+        © {{ date('Y') }} ВИЗИТ ДОНЕЦК. Все права защищены.
     </div>
 </footer>
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $post->title }} — журнал КОД НОВОРОССИИ</title>
+    <title>{{ $post->title }} — журнал ВИЗИТ ДОНЕЦК</title>
     <meta name="description" content="{{ $post->excerpt }}">
     <link rel="canonical" href="{{ url()->current() }}">
 
@@ -25,7 +25,7 @@
             'image'    => url($post->cover),
             'datePublished' => $post->published_at?->toIso8601String(),
             'author'   => ['@type' => 'Person', 'name' => $post->author?->name],
-            'publisher'=> ['@type' => 'Organization', 'name' => 'КОД НОВОРОССИИ'],
+            'publisher'=> ['@type' => 'Organization', 'name' => 'ВИЗИТ ДОНЕЦК'],
         ];
     @endphp
     <script type="application/ld+json">@json($ld)</script>
@@ -38,7 +38,7 @@
 
 <header class="hdr scrolled">
     <div class="wrap hdr-in">
-        <a class="logo" href="/">КОД<em>НОВОРОССИИ</em></a>
+        <a class="logo" href="/">ВИЗИТ<em>ДОНЕЦК</em></a>
         <nav class="nav-links">
             <a href="/#places">Места</a><a href="/#map">Карта</a><a href="/#events">Афиша</a>
         </nav>

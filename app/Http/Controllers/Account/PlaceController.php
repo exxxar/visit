@@ -12,6 +12,22 @@ use Inertia\Inertia;
 
 class PlaceController extends Controller
 {
+
+    public function index(Request $request)
+    {
+        $user = $request->user();
+
+        // ✅ ИСПРАВЛЕНО: используем ownedPlaces вместо places
+        $places = $user->ownedPlaces()
+            ->with(['category', 'district'])
+            ->latest()
+            ->paginate(10);
+
+        return Inertia::render('Account/Places/Index', [
+            'places' => $places,
+        ]);
+    }
+
     public function edit(Request $request, Place $place)
     {
         $this->authorize('update', $place);

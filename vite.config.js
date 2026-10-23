@@ -31,8 +31,8 @@ export default defineConfig({
             includeAssets: ['favicon.png', 'apple-touch-icon.png', 'masked-icon.svg'],
             manifest: {
                 id: '/',
-                name: 'КОД НОВОРОССИИ',
-                short_name: 'КОД НОВОРОССИИ',
+                name: 'ВИЗИТ ДОНЕЦК',
+                short_name: 'ВИЗИТ ДОНЕЦК',
                 description: 'Главный путеводитель по городу',
                 theme_color: '#05070d',
                 background_color: '#05070d',

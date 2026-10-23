@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'; // <-- ДОБАВЛЕНО watch
 import { Link, usePage } from '@inertiajs/vue3'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
@@ -10,6 +10,7 @@ const flash = useFlashStore()
 const page = usePage()
 const csrf = page.props.csrfToken
 const { success, error } = useToast()
+
 
 const user = computed(() => page.props.auth?.user || {})
 
@@ -33,10 +34,10 @@ const roleLabel = computed(() => {
 
 // Меню для туриста
 const touristMenu = computed(() => [
-    { href: '/account', icon: '📊', label: 'Дашборд', exact: true },
-    { href: '/account/favorites', icon: '❤️', label: 'Избранные места' },
-    { href: '/account/reviews', icon: '⭐', label: 'Мои отзывы' },
-    { href: '/account/profile', icon: '⚙️', label: 'Профиль' },
+    { href: '/account-users', icon: '📊', label: 'Дашборд', exact: true },
+    { href: '/account-users/favorites', icon: '❤️', label: 'Избранные места' },
+    { href: '/account-users/reviews', icon: '⭐', label: 'Мои отзывы' },
+    { href: '/account-users/profile', icon: '⚙️', label: 'Профиль' },
 ])
 
 // Меню для владельца бизнеса

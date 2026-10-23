@@ -78,7 +78,7 @@ const fmtDate = (d) => new Date(d).toLocaleDateString('ru-RU', {
             <div style="font-size:48px;margin-bottom:16px">🗺️</div>
             <h3 style="margin:0 0 8px">Начните исследовать Донецк!</h3>
             <p style="color:var(--mut);margin:0 0 20px">Добавляйте места в избранное и оставляйте отзывы</p>
-            <Link href="/" class="btn btn-grad">Перейти на карту</Link>
+            <Link href="/resources/js/Pages/Public" class="btn btn-grad">Перейти на карту</Link>
         </div>
     </div>
 </template>

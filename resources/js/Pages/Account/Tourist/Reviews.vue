@@ -66,7 +66,7 @@ const deleteReview = (id) => {
             <div style="font-size:48px;margin-bottom:16px">⭐</div>
             <h3 style="margin:0 0 8px">Вы пока не оставляли отзывов</h3>
             <p style="color:var(--mut);margin:0 0 20px">Поделитесь впечатлениями о заведениях</p>
-            <Link href="/" class="btn btn-grad">Перейти на карту</Link>
+            <Link href="/resources/js/Pages/Public" class="btn btn-grad">Перейти на карту</Link>
         </div>
 
         <div v-if="reviews.links.length > 3" class="pager" style="margin-top:24px">

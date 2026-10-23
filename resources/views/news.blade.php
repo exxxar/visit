@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Новости Донецка — события, открытия, обновления | КОД НОВОРОССИИ</title>
-    <meta name="description" content="Свежие новости Донецка: открытия заведений, события, акции и обновления городского путеводителя КОД НОВОРОССИИ.">
+    <title>Новости Донецка — события, открытия, обновления | ВИЗИТ ДОНЕЦК</title>
+    <meta name="description" content="Свежие новости Донецка: открытия заведений, события, акции и обновления городского путеводителя ВИЗИТ ДОНЕЦК.">
     <link rel="canonical" href="{{ request()->url() }}">
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,7 +15,7 @@
 
 <header class="hdr scrolled">
     <div class="wrap hdr-in">
-        <a class="logo" href="/">КОД<em>НОВОРОССИИ</em></a>
+        <a class="logo" href="/">ВИЗИТ<em>ДОНЕЦК</em></a>
         <nav class="nav-links">
             <a href="/#places">Места</a>
             <a href="/#map">Карта</a>

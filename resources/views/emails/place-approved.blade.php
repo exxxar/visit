@@ -6,14 +6,14 @@
 
     {{-- Шапка --}}
     <div style="text-align:center;padding:24px 0;border-bottom:1px solid rgba(255,255,255,.1)">
-        <h1 style="margin:0;font-size:24px;letter-spacing:2px;color:#22d3ee">КОД <span style="color:#8b5cf6">НОВОРОССИИ</span></h1>
+        <h1 style="margin:0;font-size:24px;letter-spacing:2px;color:#22d3ee">ВИЗИТ <span style="color:#8b5cf6">ДОНЕЦК</span></h1>
     </div>
 
     {{-- Контент --}}
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:32px;margin-top:24px">
         <h2 style="margin:0 0 16px;font-size:20px;color:#fff">🎉 Поздравляем, {{ $owner->name }}!</h2>
         <p style="line-height:1.7;color:#c9d4ee;font-size:15px;margin:0 0 12px">
-            Ваше заведение <strong style="color:#22d3ee">«{{ $place->name }}»</strong> прошло модерацию и теперь опубликовано на портале КОД НОВОРОССИИ.
+            Ваше заведение <strong style="color:#22d3ee">«{{ $place->name }}»</strong> прошло модерацию и теперь опубликовано на портале ВИЗИТ ДОНЕЦК.
         </p>
         <p style="line-height:1.7;color:#c9d4ee;font-size:15px;margin:0 0 24px">
             Карточка видна всем посетителям сайта: в каталоге, на карте города и в поиске.
@@ -38,8 +38,8 @@
 
     {{-- Подвал --}}
     <div style="text-align:center;padding:24px 0;color:#5a6684;font-size:12px">
-        <p style="margin:8px 0">С уважением, команда КОД НОВОРОССИИ</p>
-        <p style="margin:8px 0">вкод-новороссии.рф · Главный городской путеводитель</p>
+        <p style="margin:8px 0">С уважением, команда ВИЗИТ ДОНЕЦК</p>
+        <p style="margin:8px 0">ввизит-донецк.рф · Главный городской путеводитель</p>
     </div>
 </div>
 </body>

@@ -1,6 +1,6 @@
 <div class="viewer" id="viewer" role="dialog" aria-label="Просмотр журнала">
     <div class="v-top">
-        <div class="v-brand">КОД НОВОРОССИИ<em>ПЕЧАТНАЯ ВЕРСИЯ</em></div>
+        <div class="v-brand">ВИЗИТ ДОНЕЦК<em>ПЕЧАТНАЯ ВЕРСИЯ</em></div>
         <span class="v-ind" id="vInd">01 / 10</span>
         <div class="v-nav" style="display:flex;gap:8px">
             <button class="v-btn" id="vPrev" aria-label="Предыдущая">←</button>
@@ -22,7 +22,7 @@
             <div class="vpage cur" data-t="Обложка">
                 <div class="pg"><img class="bg" src="assets/hero-palm.jpg" alt=""><div class="ov"></div>
                     <div class="pg-k" style="margin-top:auto">Городской гид · №1 · {{ now()->year }}</div>
-                    <div class="pg-h" style="font-size:34px">КОД<br><span class="grad">НОВОРОССИИ</span></div>
+                    <div class="pg-h" style="font-size:34px">ВИЗИТ<br><span class="grad">ДОНЕЦК</span></div>
                     <p class="pg-p">Главный путеводитель по заведениям, услугам и отдыху города</p>
                     <div class="pg-num">01</div>
                 </div>
@@ -111,7 +111,7 @@
 
             <div class="vpage" data-t="Финал">
                 <div class="pg"><div class="pg-k">Финал</div><div class="pg-h">Увидимся<br>в городе</div>
-                    <p class="pg-p">КОД НОВОРОССИИ — digital-гид, печатный путеводитель и платформа для бизнеса.</p>
+                    <p class="pg-p">ВИЗИТ ДОНЕЦК — digital-гид, печатный путеводитель и платформа для бизнеса.</p>
                     <div class="pg-num">10</div>
                 </div>
             </div>

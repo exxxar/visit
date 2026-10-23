@@ -59,7 +59,7 @@
             <div class="m-pane" data-pane="3">
                 <label class="chk"><input type="checkbox" class="req-chk"><i>✓</i><span>Я подтверждаю достоверность предоставленной информации</span></label>
                 <label class="chk"><input type="checkbox" class="req-chk"><i>✓</i><span>Я согласен на обработку персональных данных</span></label>
-                <label class="chk"><input type="checkbox" class="req-chk"><i>✓</i><span>Я принимаю условия размещения информации на платформе «КОД НОВОРОССИИ»</span></label>
+                <label class="chk"><input type="checkbox" class="req-chk"><i>✓</i><span>Я принимаю условия размещения информации на платформе «ВИЗИТ ДОНЕЦК»</span></label>
             </div>
 
             <div class="m-nav">
@@ -81,7 +81,7 @@
     <div class="m-box">
         <button class="m-close" data-close>✕</button>
         <div id="leadFlow">
-            <div class="m-title">Получите презентацию «КОД НОВОРОССИИ»</div>
+            <div class="m-title">Получите презентацию «ВИЗИТ ДОНЕЦК»</div>
             <p class="m-sub">Оставьте контактные данные, и мы откроем доступ к презентации проекта.</p>
             <div style="height:20px"></div>
             <div class="f-2">
@@ -102,13 +102,13 @@
             <div style="height:8px"></div>
             <label class="chk"><input type="checkbox" class="req-chk"><i>✓</i><span>Я согласен на обработку моих персональных данных</span></label>
             <label class="chk"><input type="checkbox" class="req-chk"><i>✓</i><span>Я принимаю Политику конфиденциальности</span></label>
-            <label class="chk"><input type="checkbox"><i>✓</i><span>Я согласен получать информацию о проекте «КОД НОВОРОССИИ» (необязательно)</span></label>
+            <label class="chk"><input type="checkbox"><i>✓</i><span>Я согласен получать информацию о проекте «ВИЗИТ ДОНЕЦК» (необязательно)</span></label>
             <div class="m-nav"><button class="btn btn-grad" id="leadSubmit" style="flex:1">Получить презентацию</button></div>
         </div>
         <div class="m-success" id="leadSuccess" hidden>
             <div class="s-ico"><svg viewBox="0 0 40 40"><path d="M10 21 L17 28 L30 13"/></svg></div>
             <h3>Презентация готова</h3>
-            <p>Спасибо за интерес к проекту «КОД НОВОРОССИИ». Доступ к PDF открыт.</p>
+            <p>Спасибо за интерес к проекту «ВИЗИТ ДОНЕЦК». Доступ к PDF открыт.</p>
             <div class="m-nav" style="justify-content:center">
                 <button class="btn btn-grad" id="dlOnce">Скачать презентацию</button>
                 <button class="btn btn-ghost" id="dlAgain">Скачать PDF еще раз</button>

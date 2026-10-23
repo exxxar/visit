@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Рекламный партнёр — КОД НОВОРОССИИ</title>
+    <title>Рекламный партнёр — ВИЗИТ ДОНЕЦК</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800;900&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/landing.css'])
@@ -13,7 +13,7 @@
 
 <header class="hdr scrolled">
     <div class="wrap hdr-in">
-        <a class="logo" href="/">КОД<em>НОВОРОССИИ</em></a>
+        <a class="logo" href="/">ВИЗИТ<em>ДОНЕЦК</em></a>
         <a class="btn btn-ghost btn-sm" href="{{ route('ref.choose', ['phone' => $phone]) }}">← К выбору</a>
     </div>
 </header>

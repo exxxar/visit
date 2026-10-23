@@ -231,7 +231,7 @@ const closeTenantModal = () => {
 
                 <!-- Блок успешного создания (без изменений) -->
                 <div v-if="tenantResult" class="success-box">
-                    <!-- ... код успеха ... -->
+
                 </div>
 
                 <!-- Форма создания -->

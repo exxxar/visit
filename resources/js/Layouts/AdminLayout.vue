@@ -101,7 +101,7 @@ const isOn = (item) => item.exact
     <div class="admin-layout">
         <aside class="side">
             <Link href="/admin" class="side__logo">
-                КОД<em>НОВОРОСИИ · ADMIN</em>
+                ВИЗИТ<em>ДОНЕЦК · ADMIN</em>
             </Link>
 
             <nav class="side__nav">

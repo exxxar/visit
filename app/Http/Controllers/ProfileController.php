@@ -13,13 +13,15 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
     public function edit(Request $request): Response
     {
-        return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+        $user = $request->user();
+
+        // Определяем, какой компонент рендерить в зависимости от роли
+        $component = 'Account/Profile/Edit'; // По умолчанию для бизнеса (AuthenticatedLayout)
+
+        return Inertia::render($component, [
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => session('status'),
         ]);
     }

@@ -2,7 +2,7 @@
     <div class="wrap">
         <div class="f-grid">
             <div>
-                <a class="logo" href="#top">КОД<em>НОВОРОССИИ</em></a>
+                <a class="logo" href="#top">ВИЗИТ<em>ДОНЕЦК</em></a>
                 <p class="f-tag">Главный путеводитель по заведениям, услугам и отдыху города.</p>
                 <div class="f-soc">
                     <a href="{{ $settings['socials']['telegram'] ?? '#' }}" class="demo">Telegram</a>
@@ -45,6 +45,6 @@
             </span>
         </div>
 
-        <div class="f-bottom"><span>© {{ now()->year }} КОД НОВОРОССИИ</span><span>Сделано с любовью к городу от студентов кафедры КТ ДонГУ</span></div>
+        <div class="f-bottom"><span>© {{ now()->year }} ВИЗИТ ДОНЕЦК</span><span>Сделано с любовью к городу от студентов кафедры КТ ДонГУ</span></div>
     </div>
 </footer>

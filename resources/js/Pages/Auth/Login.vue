@@ -8,7 +8,7 @@ const submit = () => form.post('/login')
 <template>
     <div class="auth">
         <div class="auth__card">
-            <a href="/" class="side__logo">КОД<em>НОВОРОССИИ</em></a>
+            <a href="/" class="side__logo">ВИЗИТ<em>ДОНЕЦК</em></a>
             <h1>Вход в кабинет</h1>
 
             <form @submit.prevent="submit">

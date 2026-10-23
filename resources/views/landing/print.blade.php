@@ -2,7 +2,7 @@
     <div class="wrap print-grid">
         <div class="reveal">
             <div class="kicker">09 · Печатная версия</div>
-            <h2 style="font-size:clamp(28px,4vw,46px)">КОД НОВОРОССИИ<br><span class="grad">Теперь и в печатном формате</span></h2>
+            <h2 style="font-size:clamp(28px,4vw,46px)">ВИЗИТ ДОНЕЦК<br><span class="grad">Теперь и в печатном формате</span></h2>
             <p class="s-sub">Листайте главный путеводитель по заведениям, услугам и отдыху города прямо на сайте.</p>
 
             <div class="mag-stats">
@@ -29,7 +29,7 @@
                     <img src="assets/hero-palm.jpg" alt="">
                     <div class="mag-in">
                         <div class="mag-top"><span>ГОРОДСКОЙ ГИД</span><span>№1 · {{ now()->year }}</span></div>
-                        <div class="mag-title">КОД<span>НОВОРОССИИ</span></div>
+                        <div class="mag-title">ВИЗИТ<span>ДОНЕЦК</span></div>
                         <div class="mag-sub">Главный путеводитель по заведениям, услугам и отдыху города</div>
                         <div class="mag-foot"><i>{{ $settings['counters']['places'] ?? '150' }}+ мест</i><i>{{ $settings['counters']['categories'] ?? '30' }}+ категорий</i><i>9 районов</i></div>
                     </div>

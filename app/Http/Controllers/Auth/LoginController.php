@@ -27,7 +27,7 @@ class LoginController extends Controller
             throw ValidationException::withMessages(['email' => __('auth.failed')]);
         }
 
-        // заблокированным вход закрыт
+        // Заблокированным вход закрыт
         if (Auth::user()->isBlocked()) {
             Auth::logout();
             throw ValidationException::withMessages(['email' => 'Аккаунт заблокирован администратором']);
@@ -53,9 +53,18 @@ class LoginController extends Controller
     protected function redirectFor(User $user): string
     {
         return match (true) {
+            // 1. Админы и модераторы идут в админ-панель
             $user->hasAnyRole(['admin', 'moderator', 'editor']) => '/admin',
-            $user->hasRole('business')                          => '/account',
-            default                                             => '/',
+
+            // 2. Бизнес и партнеры идут в бизнес-кабинет
+            $user->hasAnyRole(['business', 'tech_partner', 'ad_partner']) => '/account',
+
+            // 3. Туристы (роль user) идут в свой кабинет туриста
+            $user->hasRole('user') => '/account-users',
+
+            // 4. Если роли нет вообще (например, новый пользователь), тоже отправляем в /account
+            // (Там сработает умная логика из routes/web.php, которая покажет TouristDashboard)
+            default => '/account-users',
         };
     }
 }

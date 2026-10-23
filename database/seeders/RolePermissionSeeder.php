@@ -11,6 +11,7 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
+        // Сбрасываем кэш прав доступа
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $permissions = [
@@ -25,6 +26,12 @@ class RolePermissionSeeder extends Seeder
 
             // Бизнес (Владелец заведения)
             'manage own place', 'create news', 'view own analytics',
+
+            // Технический партнёр (Новое)
+            'manage tech requests', 'view tech dashboard',
+
+            // Рекламный партнёр (Новое)
+            'manage ad campaigns', 'view ad analytics',
 
             // Куратор (заготовка на будущее)
             'manage investor requests', 'manage curator places',
@@ -46,16 +53,25 @@ class RolePermissionSeeder extends Seeder
         Role::firstOrCreate(['name' => 'editor'])
             ->syncPermissions(['view admin', 'publish posts', 'moderate events']);
 
-        // 4. Владелец бизнеса / представитель организации
-        // (уже был, управляет своей карточкой)
+        // 4. Владелец бизнеса
         Role::firstOrCreate(['name' => 'business'])
             ->syncPermissions(['manage own place', 'create news', 'view own analytics']);
 
-        // 5. Пользователь / Турист (базовая роль, пока без спец. прав, но полезна для идентификации)
-        Role::firstOrCreate(['name' => 'user'])
-            ->syncPermissions([]);
+        // 5. Технический партнёр (НОВОЕ)
+        // Может управлять своими заявками и имеет базовые права бизнеса, если у него есть своё место
+        Role::firstOrCreate(['name' => 'tech_partner'])
+            ->syncPermissions(['manage tech requests', 'view tech dashboard', 'manage own place']);
 
-        // 6. Куратор (заготовка под будущую логику площадок и заявок инвесторов)
+        // 6. Рекламный партнёр (НОВОЕ)
+        // Может управлять рекламными кампаниями и имеет базовые права бизнеса
+        Role::firstOrCreate(['name' => 'ad_partner'])
+            ->syncPermissions(['manage ad campaigns', 'view ad analytics', 'manage own place']);
+
+        // 7. Пользователь / Турист (базовая роль)
+        Role::firstOrCreate(['name' => 'user'])
+            ->syncPermissions([]); // Пока без специальных прав, просто для идентификации
+
+        // 8. Куратор (заготовка)
         Role::firstOrCreate(['name' => 'curator'])
             ->syncPermissions(['view admin', 'manage investor requests', 'manage curator places']);
     }

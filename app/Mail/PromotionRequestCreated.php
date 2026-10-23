@@ -23,7 +23,7 @@ class PromotionRequestCreated extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Ваша заявка на продвижение принята — КОД НОВОРОССИИ',
+            subject: 'Ваша заявка на продвижение принята — ВИЗИТ ДОНЕЦК',
         );
     }
 
