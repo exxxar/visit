@@ -17,6 +17,8 @@ class PlaceSeeder extends Seeder
         // Используем новые email из UserSeeder
         $owner = User::where('email', 'owner@code-novorossii.ru')->first();
         $tourist = User::where('email', 'tourist@code-novorossii.ru')->first();
+
+        // Если турист не найден, берем ID 1 (обычно это админ или первый пользователь)
         $touristId = $tourist ? $tourist->id : 1;
 
         $places = [
@@ -31,8 +33,6 @@ class PlaceSeeder extends Seeder
             ['del-mar', 'DEL MAR', 'leisure', 'Ворошиловский', 'ул. Набережная, 1', 48.030, 37.820, 3, 'assets/hotel.jpg', 4.8, false],
             ['apteka-24', 'АПТЕКА «ЗДОРОВЬЕ»', 'med', 'Ленинский', 'ул. Ляшко, 15', 47.995, 37.810, 1, 'assets/pharmacy.jpg', 4.5, false],
             ['fleur', 'FLEUR', 'shop', 'Киевский', 'пр-т Киевский, 12', 48.016, 37.844, 2, 'assets/flowers.jpg', 4.8, false],
-
-            // НОВЫЕ ЗАВЕДЕНИЯ
             ['burger-joint', 'BURGER JOINT', 'food', 'Ленинский', 'ул. 50-летия СССР, 34', 47.985, 37.830, 2, 'assets/burger.jpg', 4.6, false],
             ['vintage-barber', 'VINTAGE BARBER', 'beauty', 'Кировский', 'ул. Богдана Хмельницкого, 55', 48.050, 37.750, 2, 'assets/barber.jpg', 4.8, false],
             ['skate-zone', 'SKATE ZONE', 'sport', 'Будённовский', 'ул. Щербакова, 15', 48.020, 37.900, 1, 'assets/skate.jpg', 4.5, false],
@@ -96,11 +96,20 @@ class PlaceSeeder extends Seeder
         ]);
     }
 
+    /**
+     * ✅ ИСПРАВЛЕННЫЙ МЕТОД: теперь он добавляет user_id к каждому отзыву
+     */
     private function addReviews(string $slug, int $userId, array $reviewsData): void
     {
         $place = Place::where('slug', $slug)->first();
+
         if ($place && $place->reviews()->count() === 0) {
-            $place->reviews()->createMany($reviewsData);
+            // Добавляем user_id в каждый массив данных перед сохранением
+            $reviewsWithUser = collect($reviewsData)->map(function ($review) use ($userId) {
+                return array_merge($review, ['user_id' => $userId]);
+            })->toArray();
+
+            $place->reviews()->createMany($reviewsWithUser);
         }
     }
 }
