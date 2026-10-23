@@ -14,6 +14,7 @@ export default defineConfig({
                 'resources/css/admin.css',
                 'resources/js/app.js',
                 'resources/js/place.js',
+                'resources/js/phone-mask.js',
             ],
             refresh: true,
         }),
