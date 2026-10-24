@@ -69,6 +69,7 @@ window.addEventListener('appinstalled', () => {
 /* ============ landing.js ============ */
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+maplibregl.workerCount = 0;
 /* ============ PWA UPDATE LOGIC ============ */
 import { registerSW } from 'virtual:pwa-register';
 import FormAutoSave from './form-autosave.js';
