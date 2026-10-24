@@ -248,16 +248,40 @@ const renderMarkers = () => {
 
 // Инициализация карты
 onMounted(() => {
+    if (!mapContainer.value) return;
+
+    // ✅ Используем тот же стиль Esri, который гарантированно работает в landing.js
+    const mapStyle = {
+        version: 8,
+        sources: {
+            carto: {
+                type: 'raster',
+                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                tileSize: 256,
+                attribution: '© Esri',
+            },
+        },
+        layers: [
+            { id: 'carto', type: 'raster', source: 'carto' },
+        ],
+    };
+
     map = new maplibregl.Map({
         container: mapContainer.value,
-        style: 'https://api.maptiler.com/maps/streets/style.json?key=l7t0HU7CqsgOKgS9rtvU',
+        style: mapStyle,
         center: [37.805, 48.008],
-        zoom: 12
-    })
-    map.addControl(new maplibregl.NavigationControl(), 'top-right')
-    map.on('click', onMapClick)
-    renderMarkers()
-})
+        zoom: 12,
+        attributionControl: { compact: true }
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.on('click', onMapClick);
+
+    // ✅ ВАЖНО: рендерим маркеры только после полной загрузки стиля карты
+    map.on('load', () => {
+        renderMarkers();
+    });
+});
 
 // ВАЖНО: Пересчитываем размеры карты при разворачивании
 watch(mapCollapsed, (newVal) => {
