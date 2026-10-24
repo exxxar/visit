@@ -68,12 +68,12 @@ window.addEventListener('appinstalled', () => {
 
 /* ============ landing.js ============ */
 import * as maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
-
+import { setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 setWorkerUrl(workerUrl);
+
 
 /* ============ PWA UPDATE LOGIC ============ */
 import { registerSW } from 'virtual:pwa-register';
