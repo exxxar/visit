@@ -70,6 +70,11 @@ window.addEventListener('appinstalled', () => {
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import 'maplibre-gl/dist/maplibre-gl.css';
+
+setWorkerUrl(workerUrl);
+
 /* ============ PWA UPDATE LOGIC ============ */
 import { registerSW } from 'virtual:pwa-register';
 import FormAutoSave from './form-autosave.js';
@@ -659,48 +664,56 @@ function syncPlacesSource(objects) {
 }
 
 
+
 function initRealMap() {
     const container = document.getElementById('mapReal');
-    if (!container) return;
+    if (!container || realMap) return;
 
-    const style = {
-        version: 8,
-        sources: {
-            carto: {
-                type: 'raster',
-                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-                tileSize: 256,
-                attribution: '© Esri',
-            },
-        },
-        layers: [
-            { id: 'carto', type: 'raster', source: 'carto' },
-        ],
-    };
+    realMap = new maplibregl.Map({
+        container,
+        style: 'https://tiles.openfreemap.org/styles/bright',
+        center: [37.805, 48.008],
+        zoom: 12,
+        minZoom: 5,
+        maxZoom: 19,
+        attributionControl: {
+            compact: true
+        }
+    });
 
-    try {
-        realMap = new maplibregl.Map({
-            container: 'mapReal',
-            style,
-            center: [37.805, 48.008],
-            zoom: 12,
-            attributionControl: {compact: true},
-        });
+    realMap.addControl(
+        new maplibregl.NavigationControl(),
+        'bottom-right'
+    );
 
-        realMap.addControl(new maplibregl.NavigationControl(), 'bottom-right');
-        realMap.on('click', e => {
-            if (!e.originalEvent.target.closest('.rpin')) closeCard();
-        });
+    realMap.on('load', () => {
+        console.log('[MAP] Векторная карта загружена');
 
-        realMap.on('load', () => {
-            ensurePlacesSource();
-            loadDistrictBoundaries();
-            renderMapObjects();
-        });
-    } catch (err) {
-        console.error('[MAP] Error initializing map:', err);
-    }
+        loadDistrictBoundaries();
+        renderMapObjects();
+    });
+
+    realMap.on('error', event => {
+        console.error('[MAP] Ошибка карты:', event.error);
+    });
+
+    realMap.on('click', event => {
+        const features = realMap.queryRenderedFeatures(
+            event.point,
+            { layers: ['districts-fill'] }
+        );
+
+        if (features.length) {
+            const district = features[0].properties;
+            if (district?.slug) {
+                goDistrict(district.slug);
+            } else if (district?.name) {
+                goDistrict(district.name);
+            }
+        }
+    });
 }
+
 
 function loadDistrictBoundaries() {
     fetch('/data/districts.geojson')
