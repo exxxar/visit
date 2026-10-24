@@ -5,10 +5,6 @@ import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import VButton from '@/Components/ui/VButton.vue'
 
-/*import MaplibreWorker from 'maplibre-gl/dist/maplibre-gl-csp-worker.js?worker';
-maplibregl.workerClass = MaplibreWorker;*/
-// 2. 🔥 ОТКЛЮЧАЕМ веб-воркер. Это гарантированно убирает ошибку в Vite.
-maplibregl.workerCount = 0;
 // Стандартный воркер MapLibre отлично работает в Vite по умолчанию.
 // Ручной импорт удалён, чтобы избежать ошибок сборки Rollup.
 
@@ -251,29 +247,35 @@ const renderMarkers = () => {
 }
 
 // Инициализация карты
+// Инициализация карты
 onMounted(() => {
     if (!mapContainer.value) return;
 
-    // ✅ Используем тот же стиль Esri, который гарантированно работает в landing.js
-    const mapStyle = {
+    // ✅ БЕСПЛАТНЫЙ СТИЛЬ КАРТЫ (OpenStreetMap) БЕЗ API-КЛЮЧЕЙ
+    const freeMapStyle = {
         version: 8,
         sources: {
-            carto: {
+            osm: {
                 type: 'raster',
-                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                // Бесплатные тайлы OpenStreetMap
+                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
                 tileSize: 256,
-                attribution: '© Esri',
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             },
         },
         layers: [
-            { id: 'carto', type: 'raster', source: 'carto' },
+            {
+                id: 'osm-layer',
+                type: 'raster',
+                source: 'osm',
+            },
         ],
     };
 
     map = new maplibregl.Map({
         container: mapContainer.value,
-        style: mapStyle,
-        center: [37.805, 48.008],
+        style: freeMapStyle, // <-- Используем наш бесплатный стиль
+        center: [37.805, 48.008], // Координаты Донецка
         zoom: 12,
         attributionControl: { compact: true }
     });
@@ -281,7 +283,7 @@ onMounted(() => {
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     map.on('click', onMapClick);
 
-    // ✅ ВАЖНО: рендерим маркеры только после полной загрузки стиля карты
+    // Рендерим маркеры только после полной загрузки карты
     map.on('load', () => {
         renderMarkers();
     });
