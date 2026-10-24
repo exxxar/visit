@@ -2,17 +2,17 @@
    ОЧИСТКА СТАРЫХ SERVICE WORKERS
    ========================================================================== */
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(registrations => {
+   /* navigator.serviceWorker.getRegistrations().then(registrations => {
         registrations.forEach(registration => {
             // Удаляем все старые регистрации
             registration.unregister().then(() => {
                 console.log('✅ Старый Service Worker удалён');
             });
         });
-    });
+    });*/
 
     // Очищаем кэши Workbox, если они есть
-    if ('caches' in window) {
+   /* if ('caches' in window) {
         caches.keys().then(names => {
             names.forEach(name => {
                 if (name.includes('workbox') || name.includes('precache')) {
@@ -21,7 +21,7 @@ if ('serviceWorker' in navigator) {
                 }
             });
         });
-    }
+    }*/
 }
 /* ==========================================================================
    PWA INSTALLATION LOGIC
