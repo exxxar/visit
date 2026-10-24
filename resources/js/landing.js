@@ -576,6 +576,25 @@ function ensurePlacesSource() {
             }
         });
 
+        // Эмодзи поверх цветных маркеров
+        realMap.addLayer({
+            id: 'places-unclustered-icons',
+            type: 'symbol',
+            source: 'places-cluster',
+            filter: ['!', ['has', 'point_count']],
+            layout: {
+                'text-field': ['get', 'layerIcon'],
+                'text-size': 15,
+                'text-font': ['Open Sans Regular'],
+                'text-allow-overlap': true,
+                'text-ignore-placement': true
+            },
+            paint: {
+                'text-halo-color': '#ffffff',
+                'text-halo-width': 1
+            }
+        });
+
         // Нажатие на кластер — приблизить карту
         realMap.on('click', 'places-clusters', e => {
             const feature = realMap.queryRenderedFeatures(e.point, {
