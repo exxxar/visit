@@ -505,18 +505,31 @@ function initRealMap() {
     const container = document.getElementById('mapReal');
     if (!container) return;
 
+    const style = {
+        version: 8,
+        sources: {
+            carto: {
+                type: 'raster',
+                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                tileSize: 256,
+                attribution: '© Esri',
+            },
+        },
+        layers: [
+            { id: 'carto', type: 'raster', source: 'carto' },
+        ],
+    };
+
     try {
         realMap = new maplibregl.Map({
             container: 'mapReal',
-            // ✅ БЕСПЛАТНЫЙ СТИЛЬ OPENFREE MAP (OpenStreetMap + OpenMapTiles)
-            style: 'https://tiles.openfreemap.org/styles/bright',
-            center: [37.805, 48.008], // Координаты Донецка
+            style,
+            center: [37.805, 48.008],
             zoom: 12,
-            attributionControl: { compact: true },
+            attributionControl: {compact: true},
         });
 
         realMap.addControl(new maplibregl.NavigationControl(), 'bottom-right');
-
         realMap.on('click', e => {
             if (!e.originalEvent.target.closest('.rpin')) closeCard();
         });
