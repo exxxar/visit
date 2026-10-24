@@ -152,7 +152,7 @@ let mapSearchQuery = ''; // <-- ДОБАВЛЕНО: текущий поиско�
 
 const world = $('#mapWorld');
 const card = $('#mapCard');
-const MAPTILER_KEY = window.MAPTILER_KEY ?? 'l7t0HU7CqsgOKgS9rtvU';
+const MAPTILER_KEY = window.MAPTILER_KEY ?? null;
 
 /* ---------- СОСТОЯНИЕ ПОИСКА И ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---------- */
 let activeSearchIds = new Set(); // Хранит ID объектов, найденных при поиске
@@ -504,31 +504,18 @@ function initRealMap() {
     const container = document.getElementById('mapReal');
     if (!container) return;
 
-    const style = {
-        version: 8,
-        sources: {
-            carto: {
-                type: 'raster',
-                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-                tileSize: 256,
-                attribution: '© Esri',
-            },
-        },
-        layers: [
-            { id: 'carto', type: 'raster', source: 'carto' },
-        ],
-    };
-
     try {
         realMap = new maplibregl.Map({
             container: 'mapReal',
-            style,
-            center: [37.805, 48.008],
+            // ✅ БЕСПЛАТНЫЙ СТИЛЬ OPENFREE MAP (OpenStreetMap + OpenMapTiles)
+            style: 'https://tiles.openfreemap.org/styles/bright',
+            center: [37.805, 48.008], // Координаты Донецка
             zoom: 12,
-            attributionControl: {compact: true},
+            attributionControl: { compact: true },
         });
 
         realMap.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+
         realMap.on('click', e => {
             if (!e.originalEvent.target.closest('.rpin')) closeCard();
         });
