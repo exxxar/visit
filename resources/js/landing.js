@@ -152,7 +152,7 @@ let mapSearchQuery = ''; // <-- ДОБАВЛЕНО: текущий поиско�
 
 const world = $('#mapWorld');
 const card = $('#mapCard');
-const MAPTILER_KEY = window.MAPTILER_KEY ?? null;
+const MAPTILER_KEY = window.MAPTILER_KEY ?? 'l7t0HU7CqsgOKgS9rtvU';
 
 /* ---------- СОСТОЯНИЕ ПОИСКА И ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---------- */
 let activeSearchIds = new Set(); // Хранит ID объектов, найденных при поиске
