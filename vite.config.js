@@ -79,7 +79,9 @@ export default defineConfig({
 
                 // Разрешаем навигационные fallback для всех путей
                 navigateFallbackAllowlist: [/^(?!.*\/api\/).*/],
-
+                additionalManifestEntries: [
+                    { url: '/offline.html', revision: null }
+                ],
                 runtimeCaching: [
                     // 1. Навигация (HTML-страницы) — всегда сначала сеть, потом кэш
                     {
