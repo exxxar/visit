@@ -308,6 +308,10 @@ function renderMapObjects() {
             mapMarkers.push(marker);
         }
     });
+
+    if (mode === 'real' && realMap?.isStyleLoaded()) {
+        syncPlacesSource(visibleObjects);
+    }
 }
 
 /* ---------- ПОИСК ПО КАРТЕ ---------- */
@@ -501,6 +505,160 @@ function setMode(m) {
 if ($('#modeScheme')) $('#modeScheme').onclick = () => setMode('scheme');
 if ($('#modeReal')) $('#modeReal').onclick = () => setMode('real');
 
+
+function ensurePlacesSource() {
+    if (!realMap || !realMap.isStyleLoaded()) return;
+
+    if (!realMap.getSource('places-cluster')) {
+        realMap.addSource('places-cluster', {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: []
+            },
+            cluster: true,
+            clusterMaxZoom: 13,
+            clusterRadius: 50
+        });
+
+        // Большие круги — кластеры
+        realMap.addLayer({
+            id: 'places-clusters',
+            type: 'circle',
+            source: 'places-cluster',
+            filter: ['has', 'point_count'],
+            paint: {
+                'circle-color': '#2563eb',
+                'circle-radius': [
+                    'step',
+                    ['get', 'point_count'],
+                    20,
+                    10, 25,
+                    50, 31,
+                    100, 38
+                ],
+                'circle-stroke-width': 3,
+                'circle-stroke-color': '#ffffff'
+            }
+        });
+
+        // Число объектов внутри кластера
+        realMap.addLayer({
+            id: 'places-cluster-count',
+            type: 'symbol',
+            source: 'places-cluster',
+            filter: ['has', 'point_count'],
+            layout: {
+                'text-field': ['get', 'point_count_abbreviated'],
+                'text-size': 13
+            },
+            paint: {
+                'text-color': '#ffffff'
+            }
+        });
+
+        // Отдельные точки при приближении
+        realMap.addLayer({
+            id: 'places-unclustered',
+            type: 'circle',
+            source: 'places-cluster',
+            filter: ['!', ['has', 'point_count']],
+            paint: {
+                'circle-color': ['get', 'layerColor'],
+                'circle-radius': 7,
+                'circle-stroke-color': '#ffffff',
+                'circle-stroke-width': 2
+            }
+        });
+
+        // Нажатие на кластер — приблизить карту
+        realMap.on('click', 'places-clusters', e => {
+            const feature = realMap.queryRenderedFeatures(e.point, {
+                layers: ['places-clusters']
+            })[0];
+
+            if (!feature) return;
+
+            const clusterId = feature.properties.cluster_id;
+            const source = realMap.getSource('places-cluster');
+
+            source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+                if (err) return;
+
+                realMap.easeTo({
+                    center: feature.geometry.coordinates,
+                    zoom
+                });
+            });
+        });
+
+        // Нажатие на отдельный объект — открыть карточку
+        realMap.on('click', 'places-unclustered', e => {
+            const feature = e.features?.[0];
+            if (!feature) return;
+
+            const objectId = String(feature.properties.objectId);
+            const obj = getAllMapObjects().find(
+                item => String(item.id) === objectId
+            );
+
+            if (obj) {
+                openCard({
+                    ...obj,
+                    layerColor: obj.layerColor,
+                    layerIcon: obj.layerIcon
+                });
+            }
+        });
+
+        ['places-clusters', 'places-unclustered'].forEach(layerId => {
+            realMap.on('mouseenter', layerId, () => {
+                realMap.getCanvas().style.cursor = 'pointer';
+            });
+
+            realMap.on('mouseleave', layerId, () => {
+                realMap.getCanvas().style.cursor = '';
+            });
+        });
+    }
+}
+
+function syncPlacesSource(objects) {
+    if (!realMap || !realMap.isStyleLoaded()) return;
+
+    ensurePlacesSource();
+
+    const source = realMap.getSource('places-cluster');
+    if (!source) return;
+
+    source.setData({
+        type: 'FeatureCollection',
+        features: objects
+            .filter(obj =>
+                obj.lat != null &&
+                obj.lng != null &&
+                Number.isFinite(Number(obj.lat)) &&
+                Number.isFinite(Number(obj.lng))
+            )
+            .map(obj => ({
+                type: 'Feature',
+                geometry: {
+                    type: 'Point',
+                    coordinates: [
+                        Number(obj.lng),
+                        Number(obj.lat)
+                    ]
+                },
+                properties: {
+                    objectId: String(obj.id),
+                    name: obj.name,
+                    layerColor: obj.layerColor || '#2563eb'
+                }
+            }))
+    });
+}
+
+
 function initRealMap() {
     const container = document.getElementById('mapReal');
     if (!container) return;
@@ -535,7 +693,9 @@ function initRealMap() {
         });
 
         realMap.on('load', () => {
+            ensurePlacesSource();
             loadDistrictBoundaries();
+            renderMapObjects();
         });
     } catch (err) {
         console.error('[MAP] Error initializing map:', err);
@@ -567,7 +727,7 @@ function addDistrictLayers(geojson) {
         paint: { 'line-color': '#22d3ee', 'line-width': 2, 'line-opacity': 0.85 },
     });
 
-    geojson.features.forEach(f => {
+   /* geojson.features.forEach(f => {
         const coords = f.geometry.coordinates[0];
         const centroid = coords.reduce((acc, [lng, lat]) => ({ lng: acc.lng + lng, lat: acc.lat + lat }), { lng: 0, lat: 0 });
         centroid.lng /= coords.length;
@@ -580,6 +740,36 @@ function addDistrictLayers(geojson) {
         new maplibregl.Marker({ element: label, anchor: 'center' })
             .setLngLat([centroid.lng, centroid.lat])
             .addTo(realMap);
+    });*/
+
+
+    realMap.addLayer({
+        id: 'districts-labels',
+        type: 'symbol',
+        source: 'districts',
+        layout: {
+            'text-field': ['get', 'name'],
+            'text-font': ['Open Sans Regular'],
+            'text-size': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                9, 11,
+                12, 14,
+                15, 17
+            ],
+            'text-anchor': 'center',
+            'text-max-width': 10,
+            'text-allow-overlap': false,
+            'text-ignore-placement': false
+        },
+        paint: {
+            'text-color': '#ffffff',
+            'text-halo-color': '#172033',
+            'text-halo-width': 2,
+            'text-halo-blur': 0.5
+        },
+        minzoom: 9
     });
 
     realMap.on('mouseenter', 'districts-fill', () => {
