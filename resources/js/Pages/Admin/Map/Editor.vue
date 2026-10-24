@@ -5,6 +5,10 @@ import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import VButton from '@/Components/ui/VButton.vue'
 
+/*import MaplibreWorker from 'maplibre-gl/dist/maplibre-gl-csp-worker.js?worker';
+maplibregl.workerClass = MaplibreWorker;*/
+// 2. 🔥 ОТКЛЮЧАЕМ веб-воркер. Это гарантированно убирает ошибку в Vite.
+maplibregl.workerCount = 0;
 // Стандартный воркер MapLibre отлично работает в Vite по умолчанию.
 // Ручной импорт удалён, чтобы избежать ошибок сборки Rollup.
 
